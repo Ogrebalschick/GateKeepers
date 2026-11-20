@@ -1,0 +1,74 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=mariadb+pymysql://${DB_USER}:${DB_PASSWORD}@database:3306/${DB_NAME}
+    depends_on:
+      - database
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  model:
+    build:
+      context: ./model
+      dockerfile: Dockerfile
+    volumes:
+      - ./model/model.gguf:/app/model.gguf
+      - /lingames/llama.cpp:/app/llama.cpp
+    environment:
+      - MODEL_PATH=/app/model.gguf
+      - LLAMA_CPP_PATH=/app/llama.cpp
+    networks:
+      - app-network
+
+  database:
+    image: mariadb:11.4
+    container_name: mariadb
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-changeme}
+      - MYSQL_DATABASE=${DB_NAME:-mydb}
+      - MYSQL_USER=${DB_USER:-backend}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-changeme}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      # - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  mariadb_data:
