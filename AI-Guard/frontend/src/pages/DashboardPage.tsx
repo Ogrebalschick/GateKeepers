@@ -41,13 +41,18 @@ interface StatCardProps {
   valueClass?: string;
 }
 
-function StatCard({ icon, label, value, valueClass = 'text-gray-900' }: StatCardProps) {
+function StatCard({
+  icon,
+  label,
+  value,
+  valueClass = 'text-gray-900 dark:text-white',
+}: StatCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 flex items-start gap-3">
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-slate-700 flex items-start gap-3">
       <div className="shrink-0 mt-0.5">{icon}</div>
       <div className="min-w-0">
         <p className={`text-2xl font-bold leading-tight ${valueClass}`}>{value}</p>
-        <p className="text-xs text-gray-500 mt-0.5 leading-tight">{label}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{label}</p>
       </div>
     </div>
   );
@@ -57,12 +62,12 @@ function StatCard({ icon, label, value, valueClass = 'text-gray-900' }: StatCard
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 animate-pulse">
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-slate-700 animate-pulse">
       <div className="flex items-start gap-3">
-        <div className="w-6 h-6 rounded bg-gray-200 shrink-0 mt-0.5" />
+        <div className="w-6 h-6 rounded bg-gray-200 dark:bg-slate-700 shrink-0 mt-0.5" />
         <div className="flex-1 space-y-2 pt-1">
-          <div className="h-6 bg-gray-200 rounded w-16" />
-          <div className="h-3 bg-gray-100 rounded w-24" />
+          <div className="h-6 bg-gray-200 dark:bg-slate-700 rounded w-16" />
+          <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-24" />
         </div>
       </div>
     </div>
@@ -82,8 +87,8 @@ function CustomTooltip({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm">
-      <p className="font-medium text-gray-700 mb-1">{label}</p>
+    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg px-3 py-2 text-sm">
+      <p className="font-medium text-gray-700 dark:text-gray-200 mb-1">{label}</p>
       {payload.map((p) => (
         <p key={p.name} style={{ color: p.color }}>
           {p.name}: <span className="font-semibold">{fmt(p.value)}</span>
@@ -131,8 +136,10 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* ── Page title ───────────────────────────────────────────────────── */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Дашборд</h1>
-        <p className="text-gray-500 text-sm mt-0.5">Статистика обновляется каждые 30 секунд</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Дашборд</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
+          Статистика обновляется каждые 30 секунд
+        </p>
       </div>
 
       {/* ── Stat cards ───────────────────────────────────────────────────── */}
@@ -183,15 +190,15 @@ export default function DashboardPage() {
       {/* ── Bottom grid: chart + table ────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Timeline bar chart */}
-        <div className="xl:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">
+        <div className="xl:col-span-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+          <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-4">
             Активность за последние 24 часа
           </h2>
 
           {timelineLoading ? (
-            <div className="h-64 bg-gray-50 rounded animate-pulse" />
+            <div className="h-64 bg-gray-50 dark:bg-slate-900 rounded animate-pulse" />
           ) : chartData.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-gray-400 text-sm">
+            <div className="h-64 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
               Нет данных
             </div>
           ) : (
@@ -202,7 +209,7 @@ export default function DashboardPage() {
                 barSize={10}
                 barGap={2}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
                 <XAxis
                   dataKey="hour"
                   tick={{ fontSize: 11, fill: '#9ca3af' }}
@@ -219,7 +226,7 @@ export default function DashboardPage() {
                 <Legend
                   iconType="circle"
                   iconSize={8}
-                  wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+                  wrapperStyle={{ fontSize: 12, paddingTop: 12, color: '#64748b' }}
                 />
                 <Bar dataKey="Разрешено" fill="#22c55e" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Подтвердить" fill="#eab308" radius={[3, 3, 0, 0]} />
@@ -230,41 +237,50 @@ export default function DashboardPage() {
         </div>
 
         {/* Top categories table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="text-base font-semibold text-gray-800">Топ категорий угроз</h2>
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 dark:border-slate-700">
+            <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+              Топ категорий угроз
+            </h2>
           </div>
 
           {statsLoading ? (
             <div className="p-4 space-y-2 animate-pulse">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-8 bg-gray-100 rounded" />
+                <div key={i} className="h-8 bg-gray-100 dark:bg-slate-700 rounded" />
               ))}
             </div>
           ) : topCategories.length === 0 ? (
-            <div className="p-6 text-center text-gray-400 text-sm">Нет данных</div>
+            <div className="p-6 text-center text-gray-400 dark:text-gray-500 text-sm">
+              Нет данных
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-left">
-                    <th className="px-5 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wide">
+                  <tr className="bg-gray-50 dark:bg-slate-900 text-left">
+                    <th className="px-5 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">
                       Категория
                     </th>
-                    <th className="px-5 py-2.5 font-medium text-gray-500 text-xs uppercase tracking-wide text-right">
+                    <th className="px-5 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide text-right">
                       Кол-во
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-700">
                   {topCategories.map(({ category, count }, idx) => (
-                    <tr key={category} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-2.5 text-gray-700 font-mono text-xs">
-                        <span className="text-gray-400 mr-2">{idx + 1}.</span>
+                    <tr
+                      key={category}
+                      className="hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      <td className="px-5 py-2.5 text-gray-700 dark:text-gray-200 font-mono text-xs">
+                        <span className="text-gray-400 dark:text-gray-500 mr-2">{idx + 1}.</span>
                         {category}
                       </td>
                       <td className="px-5 py-2.5 text-right">
-                        <span className="font-semibold text-gray-800">{fmt(count)}</span>
+                        <span className="font-semibold text-gray-800 dark:text-gray-100">
+                          {fmt(count)}
+                        </span>
                       </td>
                     </tr>
                   ))}

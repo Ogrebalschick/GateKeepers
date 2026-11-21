@@ -27,18 +27,18 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="max-w-md p-8 bg-white rounded-lg shadow-lg">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
+          <div className="max-w-md p-8 bg-white dark:bg-slate-800 rounded-lg shadow-lg">
             <h1 className="text-2xl font-bold text-red-600 mb-4 flex items-center gap-2">
               <AlertTriangle className="w-6 h-6" />
               Что-то пошло не так
             </h1>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 dark:text-gray-200 mb-4">
               Произошла непредвиденная ошибка. Попробуйте обновить страницу.
             </p>
             {this.state.error && (
               <details className="mb-4">
-                <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700">
                   Детали ошибки
                 </summary>
                 <pre className="mt-2 p-3 bg-gray-100 rounded text-xs overflow-auto">

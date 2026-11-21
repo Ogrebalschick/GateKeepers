@@ -33,8 +33,8 @@ interface AttachmentForm {
 
 function IdlePlaceholder() {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-48 text-center text-gray-400 py-12">
-      <Search className="w-12 h-12 mb-3 text-gray-300" />
+    <div className="flex flex-col items-center justify-center h-full min-h-48 text-center text-gray-400 dark:text-gray-500 py-12">
+      <Search className="w-12 h-12 mb-3 text-gray-300 dark:text-slate-500" />
       <p className="text-sm font-medium">Результат проверки появится здесь</p>
       <p className="text-xs mt-1">Введите запрос и нажмите «Проверить»</p>
     </div>
@@ -47,8 +47,10 @@ function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-48 text-center py-12">
       <Loader2 className="w-10 h-10 animate-spin text-blue-500 mb-3" />
-      <p className="text-sm font-medium text-gray-600">Анализируем запрос…</p>
-      <p className="text-xs text-gray-400 mt-1">Обычно занимает меньше секунды</p>
+      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Анализируем запрос…</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+        Обычно занимает меньше секунды
+      </p>
     </div>
   );
 }
@@ -76,7 +78,7 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }
   return (
     <div className={`rounded-xl border-2 p-5 space-y-4 ${borderColor}`}>
       {/* Header */}
-      <h3 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">
+      <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm uppercase tracking-wide">
         Результат проверки
       </h3>
 
@@ -95,30 +97,44 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }
 
       {/* Category */}
       <div>
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Категория</span>
-        <p className="mt-0.5 text-sm font-mono text-gray-800">{result.risk_category}</p>
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+          Категория
+        </span>
+        <p className="mt-0.5 text-sm font-mono text-gray-800 dark:text-gray-100">
+          {result.risk_category}
+        </p>
       </div>
 
       {/* Explanation */}
       <div>
-        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           Объяснение
         </span>
-        <p className="mt-0.5 text-sm text-gray-700 italic leading-relaxed">{result.explanation}</p>
+        <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200 italic leading-relaxed">
+          {result.explanation}
+        </p>
       </div>
 
       {/* Meta row */}
-      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+      <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
         <span>
-          ⏱ Задержка: <span className="font-medium text-gray-700">{result.latency_ms} мс</span>
+          ⏱ Задержка:{' '}
+          <span className="font-medium text-gray-700 dark:text-gray-200">
+            {result.latency_ms} мс
+          </span>
         </span>
         <span>
-          🔁 Слой: <span className="font-medium text-gray-700">{result.pipeline_layer}</span>
+          🔁 Слой:{' '}
+          <span className="font-medium text-gray-700 dark:text-gray-200">
+            {result.pipeline_layer}
+          </span>
         </span>
       </div>
 
       {/* Check ID */}
-      <p className="text-xs text-gray-400 font-mono break-all">ID: {result.check_id}</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 font-mono break-all">
+        ID: {result.check_id}
+      </p>
 
       {/* Confirm/Reject buttons — only when decision === "confirm" */}
       {isConfirm && showActions && (
@@ -162,7 +178,7 @@ function FlowArrow({ status }: { status: AgentStatus }) {
     ) : status === 'allowed' ? (
       <ArrowDown className="w-6 h-6 text-green-500" />
     ) : (
-      <ArrowDown className="w-6 h-6 text-gray-300" />
+      <ArrowDown className="w-6 h-6 text-gray-300 dark:text-slate-500" />
     );
 
   return (
@@ -305,8 +321,8 @@ export default function CheckPage() {
     <div className="space-y-6">
       {/* Page title */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Проверка запроса</h1>
-        <p className="text-gray-500 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Проверка запроса</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
           Введите промпт и получите оценку безопасности от ИИ-Сторожа
         </p>
       </div>
@@ -317,7 +333,7 @@ export default function CheckPage() {
         <form onSubmit={handleSubmit} className="space-y-4 min-w-0">
           {/* Prompt textarea */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Запрос пользователя <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -327,24 +343,24 @@ export default function CheckPage() {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Введите запрос пользователя..."
               disabled={pageState === 'loading'}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 resize-none
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         disabled:bg-gray-50 disabled:text-gray-400 transition"
+                         disabled:bg-gray-50 dark:disabled:bg-slate-900 disabled:text-gray-400 dark:disabled:text-gray-500 transition"
             />
           </div>
 
           {/* Role select */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Роль пользователя
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as UserRole)}
               disabled={pageState === 'loading'}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         disabled:bg-gray-50 disabled:text-gray-400 transition cursor-pointer disabled:cursor-not-allowed"
+                         disabled:bg-gray-50 dark:disabled:bg-slate-900 disabled:text-gray-400 dark:disabled:text-gray-500 transition cursor-pointer disabled:cursor-not-allowed"
             >
               <option value="admin">admin — полный доступ</option>
               <option value="sre">sre — просмотр</option>
@@ -353,17 +369,19 @@ export default function CheckPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Сессия
-              <span className="ml-1 text-xs font-normal text-gray-400">(необязательно)</span>
+              <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+                (необязательно)
+              </span>
             </label>
             <select
               value={sessionChoice}
               onChange={(e) => setSessionChoice(e.target.value)}
               disabled={pageState === 'loading'}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         disabled:bg-gray-50 disabled:text-gray-400 transition cursor-pointer disabled:cursor-not-allowed"
+                         disabled:bg-gray-50 dark:disabled:bg-slate-900 disabled:text-gray-400 dark:disabled:text-gray-500 transition cursor-pointer disabled:cursor-not-allowed"
             >
               <option value="">Без сессии</option>
               <option value="__new__">Новая сессия</option>
@@ -394,9 +412,11 @@ export default function CheckPage() {
 
           {/* User name (optional) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Имя пользователя
-              <span className="ml-1 text-xs font-normal text-gray-400">(необязательно)</span>
+              <span className="ml-1 text-xs font-normal text-gray-400 dark:text-gray-500">
+                (необязательно)
+              </span>
             </label>
             <input
               type="text"
@@ -404,9 +424,11 @@ export default function CheckPage() {
               onChange={(e) => setUserName(e.target.value)}
               placeholder="Имя пользователя (необязательно)"
               disabled={pageState === 'loading'}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm
+                         bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                         placeholder:text-gray-400 dark:placeholder:text-gray-500
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         disabled:bg-gray-50 disabled:text-gray-400 transition"
+                         disabled:bg-gray-50 dark:disabled:bg-slate-900 disabled:text-gray-400 dark:disabled:text-gray-500 transition"
             />
           </div>
 
@@ -415,22 +437,26 @@ export default function CheckPage() {
             <button
               type="button"
               onClick={() => setShowAttachment((v) => !v)}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800
+              className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100
                          transition-colors cursor-pointer"
             >
               {showAttachment ? <X className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
               {showAttachment ? 'Убрать вложение' : 'Добавить вложение'}
-              <span className="text-xs text-gray-400">(для демо indirect injection)</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                (для демо indirect injection)
+              </span>
             </button>
 
             {showAttachment && (
-              <div className="mt-3 space-y-2 pl-6 border-l-2 border-gray-200">
+              <div className="mt-3 space-y-2 pl-6 border-l-2 border-gray-200 dark:border-slate-700">
                 <input
                   type="text"
                   value={attachment.name}
                   onChange={(e) => setAttachment((a) => ({ ...a, name: e.target.value }))}
                   placeholder="Имя файла (напр. report.txt)"
-                  className="w-full p-2.5 border border-gray-300 rounded-lg text-sm
+                  className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm
+                             bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                             placeholder:text-gray-400 dark:placeholder:text-gray-500
                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <textarea
@@ -438,7 +464,9 @@ export default function CheckPage() {
                   value={attachment.content}
                   onChange={(e) => setAttachment((a) => ({ ...a, content: e.target.value }))}
                   placeholder="Содержимое вложения (может содержать скрытые инструкции)..."
-                  className="w-full p-2.5 border border-gray-300 rounded-lg text-sm resize-none
+                  className="w-full p-2.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm resize-none
+                             bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                             placeholder:text-gray-400 dark:placeholder:text-gray-500
                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -465,8 +493,8 @@ export default function CheckPage() {
           </button>
 
           {/* Demo prompts */}
-          <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-            <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+          <div className="bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-3">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">
               Примеры для демо
             </p>
             <div className="space-y-1">
@@ -480,11 +508,11 @@ export default function CheckPage() {
                   key={label}
                   type="button"
                   onClick={() => setPrompt(text)}
-                  className="w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-gray-100
-                             text-gray-600 transition-colors cursor-pointer"
+                  className="w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-700
+                             text-gray-600 dark:text-gray-300 transition-colors cursor-pointer"
                 >
                   <span className="font-medium">{label}:</span>{' '}
-                  <span className="text-gray-500">{text}</span>
+                  <span className="text-gray-500 dark:text-gray-400">{text}</span>
                 </button>
               ))}
             </div>
@@ -493,9 +521,11 @@ export default function CheckPage() {
 
         {/* ── Right: result, then assistant ─────────────────────────────── */}
         <div className="flex flex-col gap-4 min-w-0">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-w-0 w-full">
-            <div className="px-5 py-3.5 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-700">Анализ безопасности</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col min-w-0 w-full">
+            <div className="px-5 py-3.5 border-b border-gray-100 dark:border-slate-700">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                Анализ безопасности
+              </h2>
             </div>
 
             <div className="flex-1 p-5">

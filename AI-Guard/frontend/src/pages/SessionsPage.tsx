@@ -13,7 +13,7 @@ const ROLE_CLASS: Record<string, string> = {
 };
 
 const fieldClass =
-  'px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+  'px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
 
 function shortId(id: string): string {
   return id.length > 8 ? `${id.slice(0, 8)}...` : id;
@@ -24,11 +24,11 @@ function fmtDate(iso: string): string {
 }
 
 function countClass(count: number, max: number): string {
-  if (max <= 0) return 'text-gray-800';
+  if (max <= 0) return 'text-gray-800 dark:text-gray-100';
   const ratio = count / max;
   if (ratio >= 0.8) return 'text-red-600 font-medium';
   if (ratio >= 0.5) return 'text-yellow-600 font-medium';
-  return 'text-gray-800';
+  return 'text-gray-800 dark:text-gray-100';
 }
 
 export default function SessionsPage() {
@@ -49,8 +49,10 @@ export default function SessionsPage() {
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Сессии диалогов</h1>
-          <p className="text-sm text-gray-500 mt-0.5">История проверок с сохранением контекста</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Сессии диалогов</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            История проверок с сохранением контекста
+          </p>
         </div>
         <button
           type="button"
@@ -63,7 +65,7 @@ export default function SessionsPage() {
       </div>
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-gray-500 py-8">
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 py-8">
           <Loader2 className="w-6 h-6 animate-spin" />
           Загрузка сессий…
         </div>
@@ -77,17 +79,17 @@ export default function SessionsPage() {
       )}
 
       {data && items.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-          <MessageSquare className="w-16 h-16 text-gray-300" />
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400 dark:text-gray-500">
+          <MessageSquare className="w-16 h-16 text-gray-300 dark:text-slate-500" />
           <p className="mt-3 text-sm">Нет сессий. Создайте первую!</p>
         </div>
       )}
 
       {items.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[760px]">
-              <thead className="bg-gray-50 text-gray-700 text-sm font-medium">
+              <thead className="bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-200 text-sm font-medium">
                 <tr>
                   <th className="text-left px-4 py-3">Session ID</th>
                   <th className="text-left px-4 py-3">Создана</th>
@@ -127,18 +129,25 @@ export default function SessionsPage() {
 function SessionRow({ item, onOpen }: { item: Session; onOpen: () => void }) {
   const role = item.user_role ?? '';
   return (
-    <tr onClick={onOpen} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
-      <td className="px-4 py-2.5 font-mono text-gray-800">{shortId(item.session_id)}</td>
-      <td className="px-4 py-2.5 whitespace-nowrap text-gray-600">{fmtDate(item.created_at)}</td>
+    <tr
+      onClick={onOpen}
+      className="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer"
+    >
+      <td className="px-4 py-2.5 font-mono text-gray-800 dark:text-gray-100">
+        {shortId(item.session_id)}
+      </td>
+      <td className="px-4 py-2.5 whitespace-nowrap text-gray-600 dark:text-gray-300">
+        {fmtDate(item.created_at)}
+      </td>
       <td className="px-4 py-2.5">
         {role ? (
           <span
-            className={`inline-flex text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_CLASS[role] ?? 'bg-gray-100 text-gray-700'}`}
+            className={`inline-flex text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_CLASS[role] ?? 'bg-gray-100 text-gray-700 dark:text-gray-200'}`}
           >
             {role}
           </span>
         ) : (
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400 dark:text-gray-500">—</span>
         )}
       </td>
       <td className={`px-4 py-2.5 ${countClass(item.request_count, item.max_requests)}`}>
@@ -154,7 +163,7 @@ function SessionRow({ item, onOpen }: { item: Session; onOpen: () => void }) {
             {item.threat_flags.length}
           </span>
         ) : (
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400 dark:text-gray-500">—</span>
         )}
       </td>
     </tr>
@@ -166,7 +175,7 @@ function StatusBadge({ status }: { status: Session['status'] }) {
   return (
     <span
       className={`inline-flex text-xs px-2 py-0.5 rounded-full font-medium ${
-        active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+        active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600 dark:text-gray-300'
       }`}
     >
       {active ? 'Активна' : 'Закрыта'}
@@ -214,21 +223,21 @@ function CreateSessionModal({
       />
       <form
         onSubmit={submit}
-        className="relative w-full max-w-md bg-white rounded-lg shadow-xl border border-gray-200 p-5"
+        className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 p-5"
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Новая сессия</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Новая сессия</h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 cursor-pointer"
+            className="p-1 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer"
             aria-label="Закрыть"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <label className="flex flex-col gap-1 text-sm text-gray-600 mb-3">
+        <label className="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300 mb-3">
           Роль
           <select
             className={`${fieldClass} cursor-pointer`}
@@ -241,7 +250,7 @@ function CreateSessionModal({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-gray-600 mb-5">
+        <label className="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300 mb-5">
           Лимит запросов
           <input
             type="number"
@@ -258,7 +267,7 @@ function CreateSessionModal({
             type="button"
             onClick={onClose}
             disabled={create.isPending}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm cursor-pointer disabled:cursor-not-allowed"
+            className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-50 text-sm cursor-pointer disabled:cursor-not-allowed"
           >
             Отмена
           </button>

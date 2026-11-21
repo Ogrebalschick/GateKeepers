@@ -120,10 +120,12 @@ export default function PolicyPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Политика безопасности</h1>
-      <p className="text-sm text-gray-500 mt-0.5 mb-4">Управление правилами ИИ-Сторожа</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Политика безопасности</h1>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 mb-4">
+        Управление правилами ИИ-Сторожа
+      </p>
 
-      <div className="bg-white border-b border-gray-200 mb-4 flex gap-1">
+      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 mb-4 flex gap-1">
         <TabButton active={tab === 'current'} onClick={() => setTab('current')}>
           Текущая политика
         </TabButton>
@@ -135,7 +137,7 @@ export default function PolicyPage() {
       {tab === 'current' && (
         <>
           {isLoading && (
-            <div className="flex items-center gap-2 text-gray-500 py-8">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 py-8">
               <Loader2 className="w-6 h-6 animate-spin" />
               Загрузка политики…
             </div>
@@ -148,7 +150,7 @@ export default function PolicyPage() {
           )}
           {policy && (
             <>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 flex flex-wrap gap-4">
+              <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 mb-4 flex flex-wrap gap-4">
                 <Meta label="Версия">
                   <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     v{policy.version}
@@ -175,8 +177,8 @@ export default function PolicyPage() {
                 className={[
                   'w-full h-96 font-mono text-sm rounded-lg p-4 resize-y',
                   editing
-                    ? 'bg-white border-2 border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none'
-                    : 'bg-gray-100 border border-gray-200 text-gray-700',
+                    ? 'bg-white dark:bg-slate-900 text-gray-900 dark:text-white border-2 border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none'
+                    : 'bg-gray-100 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200',
                 ].join(' ')}
               />
 
@@ -192,16 +194,18 @@ export default function PolicyPage() {
                   </button>
                 )}
                 {!editing && !isAdmin && (
-                  <p className="text-sm text-gray-500">Только admin может редактировать</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Только admin может редактировать
+                  </p>
                 )}
                 {editing && (
                   <>
-                    <label className="flex flex-col gap-1 text-sm text-gray-600 flex-1 min-w-[240px]">
+                    <label className="flex flex-col gap-1 text-sm text-gray-600 dark:text-gray-300 flex-1 min-w-[240px]">
                       Комментарий к изменению (необязательно)
                       <input
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
-                        className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </label>
                     <button
@@ -221,7 +225,7 @@ export default function PolicyPage() {
                       type="button"
                       onClick={cancelEdit}
                       disabled={save.isPending}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer disabled:cursor-not-allowed"
+                      className="bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                       Отмена
@@ -237,7 +241,7 @@ export default function PolicyPage() {
       {tab === 'history' && (
         <>
           {historyLoading && (
-            <div className="flex items-center gap-2 text-gray-500 py-8">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 py-8">
               <Loader2 className="w-6 h-6 animate-spin" />
               Загрузка истории…
             </div>
@@ -249,10 +253,10 @@ export default function PolicyPage() {
             </div>
           )}
           {history && (
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[640px]">
-                  <thead className="bg-gray-50 text-gray-700 text-sm font-medium">
+                  <thead className="bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-200 text-sm font-medium">
                     <tr>
                       <th className="text-left px-4 py-3">Версия</th>
                       <th className="text-left px-4 py-3">Дата обновления</th>
@@ -264,7 +268,10 @@ export default function PolicyPage() {
                   <tbody>
                     {history.items.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                        <td
+                          colSpan={5}
+                          className="px-4 py-8 text-center text-gray-400 dark:text-gray-500"
+                        >
                           Версий нет
                         </td>
                       </tr>
@@ -274,8 +281,8 @@ export default function PolicyPage() {
                           key={item.version}
                           className={
                             item.is_active
-                              ? 'border-t border-gray-100 bg-blue-50 font-medium'
-                              : 'border-t border-gray-100'
+                              ? 'border-t border-gray-100 dark:border-slate-700 bg-blue-50 dark:bg-slate-700 font-medium'
+                              : 'border-t border-gray-100 dark:border-slate-700'
                           }
                         >
                           <td className="px-4 py-2.5">v{item.version}</td>
@@ -283,12 +290,14 @@ export default function PolicyPage() {
                             {fmtDate(item.updated_at)}
                           </td>
                           <td className="px-4 py-2.5">{item.updated_by}</td>
-                          <td className="px-4 py-2.5 text-gray-600">{item.comment ?? '—'}</td>
+                          <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300">
+                            {item.comment ?? '—'}
+                          </td>
                           <td className="px-4 py-2.5">
                             {item.is_active ? (
                               <Check className="w-4 h-4 text-blue-600" aria-label="Активная" />
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="text-gray-400 dark:text-gray-500">—</span>
                             )}
                           </td>
                         </tr>
@@ -322,7 +331,7 @@ function TabButton({
         'px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors cursor-pointer',
         active
           ? 'border-blue-500 text-blue-600 font-medium'
-          : 'border-transparent text-gray-500 hover:text-gray-800',
+          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100',
       ].join(' ')}
     >
       {children}
@@ -333,8 +342,8 @@ function TabButton({
 function Meta({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="text-sm">
-      <div className="text-gray-500 text-xs mb-0.5">{label}</div>
-      <div className="text-gray-900">{children}</div>
+      <div className="text-gray-500 dark:text-gray-400 text-xs mb-0.5">{label}</div>
+      <div className="text-gray-900 dark:text-white">{children}</div>
     </div>
   );
 }

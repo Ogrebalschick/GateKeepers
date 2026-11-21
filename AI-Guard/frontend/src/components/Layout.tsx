@@ -38,7 +38,7 @@ function navClass({ isActive }: { isActive: boolean }) {
     'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors cursor-pointer';
   return isActive
     ? `${base} bg-blue-600 text-white font-medium`
-    : `${base} text-slate-300 hover:bg-slate-800 hover:text-white`;
+    : `${base} text-white/90 dark:text-white hover:bg-slate-800 hover:text-white`;
 }
 
 export default function Layout() {
@@ -69,7 +69,7 @@ export default function Layout() {
         ].join(' ')}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2 px-5 py-5 border-b border-slate-700">
+        <div className="flex items-center gap-2 px-5 py-5 border-b border-slate-700 dark:border-slate-700">
           <Shield className="w-8 h-8 text-blue-500 shrink-0" />
           <span className="text-xl font-bold text-white tracking-tight">ИИ-Сторож</span>
         </div>
@@ -84,7 +84,7 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="border-t border-gray-700 p-4 mt-auto">
+        <div className="border-t border-gray-700 dark:border-slate-700 p-4 mt-auto">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
@@ -123,22 +123,22 @@ export default function Layout() {
       </aside>
 
       {/* ── Main area ─────────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden bg-gray-50">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden bg-gray-50 dark:bg-slate-900">
         {/* Mobile header */}
-        <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
+        <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shadow-sm">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5" />
           </button>
           <Shield className="w-5 h-5 text-blue-600" />
-          <span className="font-semibold text-gray-800">ИИ-Сторож</span>
+          <span className="font-semibold text-gray-800 dark:text-gray-100">ИИ-Сторож</span>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 text-gray-900 dark:text-gray-100">
           <Outlet />
         </main>
       </div>

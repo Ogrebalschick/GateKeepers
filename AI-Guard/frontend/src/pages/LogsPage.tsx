@@ -121,8 +121,10 @@ export default function LogsPage() {
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Журнал проверок</h1>
-          <p className="text-sm text-gray-500 mt-0.5">История всех проверок запросов ИИ-Сторожем</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Журнал проверок</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            История всех проверок запросов ИИ-Сторожем
+          </p>
         </div>
         <button
           type="button"
@@ -163,16 +165,16 @@ export default function LogsPage() {
           Не удалось загрузить журнал
         </div>
       ) : isLoading ? (
-        <div className="flex items-center gap-2 text-gray-500 text-sm py-8">
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm py-8">
           <Loader2 className="w-6 h-6 animate-spin" />
           Загрузка журнала…
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[880px]">
               <thead>
-                <tr className="bg-gray-50 text-gray-700 text-sm font-medium text-left">
+                <tr className="bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-200 text-sm font-medium text-left">
                   <th className="px-4 py-2.5">Время</th>
                   <th className="px-4 py-2.5">Пользователь</th>
                   <th className="px-4 py-2.5">Запрос</th>
@@ -186,7 +188,10 @@ export default function LogsPage() {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                    <td
+                      colSpan={8}
+                      className="px-4 py-8 text-center text-gray-400 dark:text-gray-500"
+                    >
                       Записей не найдено
                     </td>
                   </tr>
@@ -208,7 +213,7 @@ export default function LogsPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+      <div className="flex items-center justify-between mt-4 text-sm text-gray-600 dark:text-gray-300">
         <span>
           Запись {from}–{to} из {total}
         </span>
@@ -217,7 +222,7 @@ export default function LogsPage() {
             type="button"
             disabled={page <= 1 || isLoading}
             onClick={() => patch({ page: page - 1 })}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-white cursor-pointer disabled:cursor-not-allowed"
+            className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg disabled:opacity-40 hover:bg-white dark:hover:bg-slate-700 cursor-pointer disabled:cursor-not-allowed"
           >
             ‹ Назад
           </button>
@@ -225,7 +230,7 @@ export default function LogsPage() {
             type="button"
             disabled={!data || page >= data.pages || isLoading}
             onClick={() => patch({ page: page + 1 })}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-white cursor-pointer disabled:cursor-not-allowed"
+            className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg disabled:opacity-40 hover:bg-white dark:hover:bg-slate-700 cursor-pointer disabled:cursor-not-allowed"
           >
             Далее ›
           </button>
@@ -252,8 +257,13 @@ function LogRow({
   onUser: () => void;
 }) {
   return (
-    <tr onClick={onOpen} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
-      <td className="px-4 py-2.5 whitespace-nowrap text-gray-500">{fmtTime(item.created_at)}</td>
+    <tr
+      onClick={onOpen}
+      className="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer"
+    >
+      <td className="px-4 py-2.5 whitespace-nowrap text-gray-500 dark:text-gray-400">
+        {fmtTime(item.created_at)}
+      </td>
       <td className="px-4 py-2.5">
         <button
           type="button"
@@ -266,21 +276,25 @@ function LogRow({
           {item.user_name}
         </button>
         <span
-          className={`ml-2 inline-flex px-2 py-0.5 rounded text-xs ${ROLE_CLASS[item.user_role] ?? 'bg-gray-100 text-gray-700'}`}
+          className={`ml-2 inline-flex px-2 py-0.5 rounded text-xs ${ROLE_CLASS[item.user_role] ?? 'bg-gray-100 text-gray-700 dark:text-gray-200'}`}
         >
           {item.user_role}
         </span>
       </td>
-      <td className="px-4 py-2.5 text-gray-800 max-w-xs">{clip(item.user_prompt)}</td>
+      <td className="px-4 py-2.5 text-gray-800 dark:text-gray-100 max-w-xs">
+        {clip(item.user_prompt)}
+      </td>
       <td className="px-4 py-2.5">
         <DecisionBadge decision={item.decision} size="sm" />
       </td>
       <td className="px-4 py-2.5">
         <RiskBadge riskLevel={item.risk_level} size="sm" />
       </td>
-      <td className="px-4 py-2.5 font-mono text-xs text-gray-600">{item.risk_category}</td>
-      <td className="px-4 py-2.5 text-right text-gray-500">{item.latency_ms}</td>
-      <td className="px-4 py-2.5 text-gray-500">{item.pipeline_layer}</td>
+      <td className="px-4 py-2.5 font-mono text-xs text-gray-600 dark:text-gray-300">
+        {item.risk_category}
+      </td>
+      <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-400">{item.latency_ms}</td>
+      <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400">{item.pipeline_layer}</td>
     </tr>
   );
 }

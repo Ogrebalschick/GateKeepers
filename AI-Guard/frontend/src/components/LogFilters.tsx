@@ -16,12 +16,12 @@ interface Props {
 }
 
 const fieldClass =
-  'px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
+  'px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent';
 
 export default function LogFilters({ values, onChange, onReset }: Props) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 flex flex-wrap gap-3 items-end">
-      <label className="flex flex-col gap-1 text-xs text-gray-500">
+    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 mb-4 flex flex-wrap gap-3 items-end">
+      <label className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
         Решение
         <select
           className={`${fieldClass} cursor-pointer`}
@@ -35,7 +35,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
         </select>
       </label>
 
-      <label className="flex flex-col gap-1 text-xs text-gray-500">
+      <label className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
         Уровень риска
         <select
           className={`${fieldClass} cursor-pointer`}
@@ -51,7 +51,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
         </select>
       </label>
 
-      <label className="flex flex-col gap-1 text-xs text-gray-500 min-w-48 flex-1">
+      <label className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-48 flex-1">
         Поиск
         <input
           className={fieldClass}
@@ -61,7 +61,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs text-gray-500">
+      <label className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
         Дата от
         <input
           type="date"
@@ -71,7 +71,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs text-gray-500">
+      <label className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
         Дата до
         <input
           type="date"
@@ -84,7 +84,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
       <button
         type="button"
         onClick={onReset}
-        className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
+        className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 cursor-pointer"
       >
         <RotateCcw className="w-4 h-4" />
         Сбросить

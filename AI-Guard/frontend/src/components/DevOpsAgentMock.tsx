@@ -8,7 +8,7 @@ interface Props {
 }
 
 const SHELL =
-  'bg-white border-2 rounded-lg p-6 shadow-sm transition-all duration-500 min-h-48 min-w-0';
+  'bg-white dark:bg-slate-800 border-2 rounded-lg p-6 shadow-sm transition-all duration-500 min-h-48 min-w-0';
 
 export default function DevOpsAgentMock({ status, response }: Props) {
   if (status === 'allowed') {
@@ -17,13 +17,15 @@ export default function DevOpsAgentMock({ status, response }: Props) {
         <div className="flex items-start gap-3">
           <CheckCircle className="w-8 h-8 text-green-500 shrink-0" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900">DevOps-ассистент</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              DevOps-ассистент
+            </h3>
             <p className="mt-2 text-sm font-medium text-green-700">
               Запрос передан DevOps-ассистенту
             </p>
             {response && (
-              <p className="mt-3 text-sm text-gray-700 leading-relaxed">
-                <span className="font-medium text-gray-500">Ответ агента: </span>
+              <p className="mt-3 text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+                <span className="font-medium text-gray-500 dark:text-gray-400">Ответ агента: </span>
                 {response}
               </p>
             )}
@@ -39,9 +41,13 @@ export default function DevOpsAgentMock({ status, response }: Props) {
         <div className="flex items-start gap-3">
           <XCircle className="w-8 h-8 text-red-500 shrink-0" />
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">DevOps-ассистент</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              DevOps-ассистент
+            </h3>
             <p className="mt-2 text-sm font-medium text-red-700">Запрос заблокирован Сторожем</p>
-            <p className="mt-2 text-sm text-gray-600">DevOps-ассистент не получил запрос</p>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              DevOps-ассистент не получил запрос
+            </p>
           </div>
         </div>
       </div>
@@ -54,11 +60,13 @@ export default function DevOpsAgentMock({ status, response }: Props) {
         <div className="flex items-start gap-3">
           <AlertCircle className="w-8 h-8 text-yellow-500 shrink-0" />
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">DevOps-ассистент</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              DevOps-ассистент
+            </h3>
             <p className="mt-2 text-sm font-medium text-yellow-700">
               Ожидание подтверждения пользователя
             </p>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
               Запрос дойдёт до агента только после явного подтверждения
             </p>
           </div>
@@ -68,9 +76,9 @@ export default function DevOpsAgentMock({ status, response }: Props) {
   }
 
   return (
-    <div className={`${SHELL} border-gray-200`}>
-      <div className="flex flex-col items-center justify-center text-center py-6 text-gray-400">
-        <Bot className="w-8 h-8 text-gray-400 animate-pulse" />
+    <div className={`${SHELL} border-gray-200 dark:border-slate-700`}>
+      <div className="flex flex-col items-center justify-center text-center py-6 text-gray-400 dark:text-gray-500">
+        <Bot className="w-8 h-8 text-gray-400 dark:text-gray-500 animate-pulse" />
         <p className="mt-3 text-sm">Ожидание решения Сторожа...</p>
       </div>
     </div>

@@ -76,23 +76,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 dark:bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* ── Card ── */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 rounded-2xl shadow-lg p-8">
           {/* Logo + Title */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-3">
               <Shield className="w-14 h-14 text-blue-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">ИИ-Сторож</h1>
-            <p className="text-gray-500 text-sm mt-1">Вход в систему</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ИИ-Сторож</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Вход в систему</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
+              >
                 Логин
               </label>
               <input
@@ -104,14 +107,19 @@ export default function LoginPage() {
                 placeholder="admin"
                 required
                 disabled={loading}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm
+                           bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                           placeholder:text-gray-400 dark:placeholder:text-gray-500
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           disabled:bg-gray-50 disabled:text-gray-400 transition"
+                           disabled:bg-gray-50 dark:disabled:bg-slate-900 disabled:text-gray-400 dark:disabled:text-gray-500 transition"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
+              >
                 Пароль
               </label>
               <div className="relative">
@@ -124,16 +132,18 @@ export default function LoginPage() {
                   placeholder="••••••••••••"
                   required
                   disabled={loading}
-                  className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm
+                  className="w-full pl-4 pr-10 py-2.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm
+                             bg-white dark:bg-slate-800 text-gray-900 dark:text-white
+                             placeholder:text-gray-400 dark:placeholder:text-gray-500
                              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                             disabled:bg-gray-50 disabled:text-gray-400 transition"
+                             disabled:bg-gray-50 dark:disabled:bg-slate-900 disabled:text-gray-400 dark:disabled:text-gray-500 transition"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((visible) => !visible)}
                   disabled={loading}
                   aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500
                              hover:opacity-70 transition cursor-pointer disabled:cursor-not-allowed"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -163,15 +173,15 @@ export default function LoginPage() {
           {!isAuthenticated && (
             <div className="mt-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-px flex-1 bg-gray-200" />
-                <span className="text-xs text-gray-400">или</span>
-                <div className="h-px flex-1 bg-gray-200" />
+                <div className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
+                <span className="text-xs text-gray-400 dark:text-gray-500">или</span>
+                <div className="h-px flex-1 bg-gray-200 dark:bg-slate-700" />
               </div>
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-sm text-gray-600
-                           hover:border-gray-400 hover:bg-gray-50 transition cursor-pointer"
+                className="w-full py-2.5 px-4 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-600 dark:text-gray-300
+                           hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition cursor-pointer"
               >
                 Продолжить как гость
               </button>
@@ -179,12 +189,12 @@ export default function LoginPage() {
           )}
 
           {/* Demo credentials hint */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600">
-            <p className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+          <div className="mt-6 p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-700 text-xs text-gray-600 dark:text-gray-300">
+            <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2 flex items-center gap-1.5">
               <GraduationCap className="w-4 h-4" />
               Demo credentials (для жюри)
             </p>
-            <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto_1rem] gap-x-3 px-2 pb-1 text-gray-500 font-medium">
+            <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto_1rem] gap-x-3 px-2 pb-1 text-gray-500 dark:text-gray-400 font-medium">
               <span>Логин</span>
               <span>Пароль</span>
               <span>Роль</span>
@@ -199,12 +209,12 @@ export default function LoginPage() {
                   onClick={() => fillDemo(account)}
                   className="w-full grid grid-cols-[5.5rem_minmax(0,1fr)_auto_1rem] gap-x-3 items-center
                              text-left px-2 py-1.5 rounded-md font-mono cursor-pointer
-                             hover:bg-white transition disabled:cursor-not-allowed"
+                             hover:bg-white dark:hover:bg-slate-600 transition disabled:cursor-not-allowed"
                 >
-                  <span className="text-gray-800">{account.username}</span>
-                  <span className="text-gray-800">{account.password}</span>
+                  <span className="text-gray-800 dark:text-gray-100">{account.username}</span>
+                  <span className="text-gray-800 dark:text-gray-100">{account.password}</span>
                   <span className={`font-sans ${account.accessClass}`}>{account.access}</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
+                  <ArrowRight className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                 </button>
               ))}
             </div>
