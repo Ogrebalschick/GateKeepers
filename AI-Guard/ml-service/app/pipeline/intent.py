@@ -6,9 +6,18 @@ _META_TASK = re.compile(
     r"(?:объясни|расскажи|сравни|сравнен\w*|проверь|суммируй|классифицируй|определи|переведи|расследуй|проанализируй|обнаружь|что\s+(?:делает|такое)|почему|какие\s+меры)",
     re.I,
 )
+_INFORMATIONAL_QUERY = re.compile(
+    r"^\s*(?:(?:hi|hello|hey|good morning|good afternoon|quick question|привет|здравствуйте|добрый день|слушай)[,!:.\s]+)*"
+    r"(?:what\s+(?:is|are|were|was|does|caused|causes)|why\b|who\b|when\b|where\b|which\b|"
+    r"what'?s\s+the\s+difference|difference\s+between|define\b|meaning\s+of|"
+    r"explain\b.{0,100}(?:difference|meaning|concept|term|definition)|"
+    r"что\s+такое|почему|кто\b|когда\b|где\b|какие\s+причины|чем\s+отличается|в\s+ч[её]м\s+разниц\w*|"
+    r"объясни\b.{0,100}(?:разниц\w*|значени\w*|поняти\w*|термин\w*))",
+    re.I,
+)
 _SAFE_CONTEXT = re.compile(
-    r"\b(?:defen[cs]ive|security\s+training|security\s+class|classroom|educational\s+example|harmless\s+example|training|threat[- ]intelligence|incident\s+report|incident\s+response|incident|forensic|evidence|audit\s+(?:log|record|events?)|detection|detect(?:ion)?|mitigat\w*|prevent\w*|preserve|safe\s+ways|safely\s+inspect|indicator|telemetry|least privilege|policy-level|without executing|do not execute|not asking to execute|dangerous|unsafe|prohibited|not allowed|how to check logs|whether someone ran|harden(?:ing)?|rotate credentials|credential rotation|access policies|safe credential rotation|whether someone attempted|vault access policy|security\s+alert|endpoint\s+logs|network\s+logs|threat\s+hunting|soc|vulnerability\s+analysis|malware\s+analysis|security\s+research|sql\s+injection|log4shell|reverse\s+shell|system\s+prompt|rbac|kubernetes|break[- ]glass\s+access|release\s+history|release\s+notes|deployment\s+history|postmortem|post-mortem|root\s+cause|falco|base64|bug\s+report|suspicious\s+(?:string|message)|literal\s+text|signs\s+of\s+phishing|report\s+(?:a\s+)?suspicious\s+message|isolated|disposable|development\s+database|test\s+database|change\s+request|security\s+log)\b|"
-    r"(?:защит\w*|обучени\w*\s+безопасност|отч[её]т\s+об\s+инцидент|инцидент\w*|доказательств\w*|обнаружени\w*|детектировани\w*|предотврат\w*|сохранить\s+логи|как\s+проверить\s+логи|безопасн\w*\s+способ\w*|не\s+выполняй|не\s+запускай|индикатор\w*|не\s+обходя\s+права|через\s+sre|учебн\w*|без\s+выполнения|без\s+запуска)",
+    r"\b(?:defen[cs]ive|security\s+training|security\s+class|classroom|educational\s+example|harmless\s+example|training|threat[- ]intelligence|incident\s+report|incident\s+response|incident|forensic|evidence|audit\s+(?:logs?|record|events?)|detection|detect(?:ion)?|phishing\s+detection|phishing\s+analysis|malware\s+indicators|signs\s+of\s+malware|malware\s+script\s+analysis|mitigat\w*|prevent\w*|preserve|safe\s+ways|safely\s+inspect|indicator|telemetry|least privilege|policy-level|without executing|do not execute|not asking to execute|dangerous|unsafe|prohibited|not allowed|how to check logs|whether someone ran|harden(?:ing)?|rotate credentials|credential rotation|access policies|safe credential rotation|whether someone attempted|vault access policy|security\s+alert|endpoint\s+logs|network\s+logs|threat\s+hunting|soc|vulnerability\s+analysis|malware\s+analysis|security\s+research|sql\s+injection|log4shell|reverse\s+shell|system\s+prompt|rbac|kubernetes|break[- ]glass\s+access|release\s+history|release\s+notes|deployment\s+history|postmortem|post-mortem|root\s+cause|falco|base64|bug\s+report|suspicious\s+(?:string|message)|literal\s+text|signs\s+of\s+phishing|report\s+(?:a\s+)?suspicious\s+message|isolated|disposable|development\s+database|test\s+database|change\s+request|security\s+log)\b|"
+    r"(?:защит\w*|обучени\w*\s+безопасност|отч[её]т\s+об\s+инцидент|инцидент\w*|доказательств\w*|обнаружени\w*|детектировани\w*|предотврат\w*|признак\w* вредоносн\w*|анализ\w* фишингов\w*|обнаружить фишинг|сохранить\s+логи|как\s+проверить\s+логи|безопасн\w*\s+способ\w*|не\s+выполняй|не\s+запускай|индикатор\w*|не\s+обходя\s+права|через\s+sre|учебн\w*|без\s+выполнения|без\s+запуска)",
     re.I,
 )
 _DETECTION_RULE = re.compile(
@@ -24,7 +33,11 @@ _UNSAFE_HOWTO = re.compile(
     re.I,
 )
 _UNSAFE_CREATION = re.compile(
-    r"\b(?:write|create|build|develop|generate|make|install|deploy|construct|напиши|создай|собери|разработай)\s+(?:a\s+|an\s+)?(?:ransomware|malware|spyware|keylogger|botnet|credential stealer|password stealer|exploit|payload|вредоносн\w*|кейлоггер|ботнет|эксплойт|вымогател\w*)\b",
+    r"(?:\b(?:write|create|build|develop|generate|make|install|deploy|construct|напиши|создай|собери|разработай|установи)\s+(?:a\s+|an\s+)?"
+    r"(?:ransomware|malware|spyware|keylogger|botnet|credential stealer|password stealer|exploit|payload|вредоносн\w*|кейлоггер|ботнет|эксплойт|вымогател\w*)\b|"
+    r"\b(?:how\s+to|how\s+can\s+i|explain\s+how\s+to|help\s+me\s+to)\s+(?:write|create|build|develop|make|install|deploy)\s+(?:a\s+|an\s+)?"
+    r"(?:ransomware|malware|spyware|keylogger|botnet|credential stealer|password stealer|exploit|payload)\b|"
+    r"(?:как\s+(?:написать|создать|собрать|разработать|сделать|установить).{0,40}(?:вымогател\w*|вредоносн\w*|кейлоггер|ботнет|эксплойт|payload)))",
     re.I,
 )
 _MENTIONED_COMMAND = re.compile(
@@ -43,9 +56,18 @@ _PHISHING_CREDENTIAL_REQUEST = re.compile(
     r"(?:write|draft|create|compose|составь|напиши|сформулируй).{0,100}(?:it\s+support|helpdesk|техподдержк|служб\w*\s+поддержк\w*).{0,120}(?:email|message|письм\w*).{0,160}(?:re[- ]enter|enter|submit|confirm|verify|введ\w*|повторно\s+введ\w*).{0,100}(?:sso|password|credentials?|парол\w*|уч[её]тн\w* данн\w*).{0,160}(?:https?://|www\.|\blink\b|ссылк\w*)",
     re.I,
 )
+_SYNTHETIC_DATA_REQUEST = re.compile(
+    r"(?:create|generate|make|build|prepare|сгенерируй|создай|подготовь|сделай).{0,140}"
+    r"(?:synthetic|mock|dummy|fake|fictional|sample|test|синтетическ\w*|тестов\w*|фиктивн\w*|вымышленн\w*|ненастоящ\w*).{0,120}"
+    r"(?:dataset|data|records?|fixture|customer names?|customer list|fake names|fictional names|email addresses|"
+    r"имена клиентов|список клиентов|набор данных|фикстур\w*|запис\w*|данн\w*)",
+    re.I,
+)
 _DOCUMENT_REVIEW = re.compile(
-    r"\b(?:summari[sz]e|review|read|analy[sz]e|inspect|translate|перескажи|суммируй|прочитай|проверь|проанализируй|переведи)\b.{0,120}\b(?:document|file|attachment|report|note|page|change\s+request|security\s+training|документ|файл|вложени|отч[её]т|записк|страниц|заявк\w*\s+на\s+изменени\w*)\b|"
-    r"(?:что\s+здесь\s+написано|кратк\w*\s+содержани\w*)",
+    r"\b(?:summari[sz]e|review|read|analy[sz]e|inspect|translate|перескажи|суммируй|прочитай|проверь|проанализируй|переведи|анализируй|сделай|подготовь|составь)\b.{0,140}"
+    r"\b(?:document|file|attachment|report|note|page|change\s+request|security\s+training|postmortem|post-mortem|runbook|memo|checklist|incident|log|logs|config(?:uration)?|"
+    r"документ|файл|вложени|отч[её]т|записк|страниц|заявк\w*\s+на\s+изменени\w*|постмортем|инструкц\w*|инцидент\w*|лог\w*|конфиг\w*)\b|"
+    r"(?:what\s+is\s+written\s+here|что\s+здесь\s+написано|кратк\w*\s+содержани\w*)",
     re.I,
 )
 _EXPLICIT_EXECUTION = re.compile(
@@ -74,9 +96,9 @@ _QUOTED_AND_CODE = [
     re.compile(r"(?<!\w)'[^'\n]{3,2000}'(?!\w)"),
 ]
 _REPORTED_ACTION = re.compile(
-    r"\b(?:the\s+)?(?:attacker|threat\s+actor|malware|someone|user)\s+(?:tried|attempted|attempts|was\s+trying)\s+to\s+"
-    r"(?:disable|turn\s+off|wipe|erase|delete|remove|exfiltrate|send|upload|forward|steal|dump)\b(?:\s+\w+){0,5}|"
-    r"\b(?:attempts?\s+to|attempted\s+to|trying\s+to|tried\s+to)\s+(?:disable|turn\s+off|wipe|erase|delete|remove)\b(?:\s+\w+){0,5}\b(?:auditd?|audit|logging|logs?)\b",
+    r"\b(?:the\s+)?(?:attacker|threat\s+actor|malware|someone|user|account)\s+(?:tried|attempted|attempts|was\s+trying)\s+to\s+"
+    r"(?:disable|turn\s+off|wipe|erase|delete|remove|exfiltrate|send|upload|forward|steal|dump|run|execute|launch|start|add|insert|append|replace|modify)\b(?:\s+\w+){0,8}|"
+    r"\b(?:attempts?\s+to|attempted\s+to|trying\s+to|tried\s+to)\s+(?:disable|turn\s+off|wipe|erase|delete|remove|add|insert|append|replace|modify)\b(?:\s+\w+){0,8}\b(?:auditd?|audit|logging|logs?|ssh.?keys?|authorized_keys|sudoers)\b",
     re.I,
 )
 
@@ -90,7 +112,10 @@ _META_OBJECT_AFTER_COLON = re.compile(
 def has_explicit_execution(text: str) -> bool:
     value = str(text or "")
     value = re.sub(
-        r"\b(?:do\s+not|don't|never|without|should\s+not|must\s+not|не\s+надо|не\s+нужно|не\s+выполняй|не\s+запускай)\s+(?:run|execute|perform|send|upload|forward|reveal|print|выполнять|запускать|отправлять|раскрывать)\b",
+        r"\b(?:do\s+not|don't|never|without|should\s+not|must\s+not|not\s+executing|without\s+executing|without\s+running)\s+"
+        r"(?:run|running|execute|executing|perform|performing|send|sending|upload|uploading|forward|forwarding|reveal|revealing|print|printing)\b|"
+        r"(?:не\s+(?:надо|нужно|выполняй|выполняя|выполнять|исполняй|исполняя|исполнять|запускай|запуская|запускать)|"
+        r"без\s+(?:выполнения|исполнения|запуска))\s+(?:команд\w*|инструкц\w*|run|execute|commands?)?",
         " ", value, flags=re.I,
     )
     value = strip_reference_spans(value)
@@ -122,6 +147,19 @@ def is_safe_analysis_request(text: str) -> bool:
             return False
     if _PHISHING_CREDENTIAL_REQUEST.search(value):
         return False
+    if re.search(
+        r"(?:investigate|review|analy[sz]e|inspect|расследуй|проверь|проанализируй).{0,120}"
+        r"(?:whether|if|attempted|tried|пытал\w*|попытк\w*).{0,140}"
+        r"(?:ssh.?keys?|authorized_keys|sudoers|auditd?|audit logs?|журнал\w* аудита|ssh.?ключ\w*|sudoers)",
+        value, re.I,
+    ) and not has_explicit_execution(value):
+        return True
+    if _SYNTHETIC_DATA_REQUEST.search(value) and not re.search(
+        r"(?:real|actual|production|live|existing).{0,60}(?:customer|personal|user|account).{0,40}(?:data|records?)|"
+        r"(?:реальн\w*|боев\w*|производственн\w*).{0,60}(?:клиент\w*|пользователь\w*|персональн\w*).{0,40}(?:данн\w*|запис\w*)",
+        value, re.I,
+    ):
+        return True
     if is_detection_rule_request(value):
         return True
     if is_document_review_request(value):
@@ -147,7 +185,7 @@ def is_safe_analysis_request(text: str) -> bool:
         value, re.I,
     ):
         return True
-    if re.search(r"(?:write|draft|compose|help me write|напиши|составь|сформулируй|подготовь).{0,100}(?:polite\s+email|email|postmortem|post-mortem|incident\s+report|short\s+story|story|письм\w*|рассказ\w*|постмортем|отч[её]т\w*\s+об\s+инциденте)", value, re.I):
+    if re.search(r"(?:write|draft|compose|help me write|prepare|напиши|составь|сформулируй|подготовь).{0,100}(?:polite\s+email|postmortem|post-mortem|incident\s+report|short\s+story|story|вежлив\w*\s+письм\w*|рассказ\w*|постмортем|отч[её]т\w*\s+об\s+инциденте)", value, re.I):
         return True
     if re.search(r"\bwhat should i do instead\b|что мне сделать вместо этого", value, re.I):
         return True
@@ -157,8 +195,17 @@ def is_safe_analysis_request(text: str) -> bool:
     ):
         return True
     if re.search(
-        r"\b(?:write|draft|compose)\b.{0,40}\b(?:a\s+)?(?:polite\s+)?(?:email|message|note|unit\s+test|test)\b|"
-        r"\b(?:write|draft)\s+(?:a\s+)?test\b|(?:напиши|составь)\s+(?:вежлив\w*\s+)?(?:письм\w*|тест\w*)",
+        r"(?:write|draft|compose|prepare|составь|напиши|подготовь).{0,120}"
+        r"(?:neutral|routine|informational|maintenance|planned downtime|обслуживан\w*|планов\w* прост\w*|нейтральн\w*).{0,100}"
+        r"(?:notice|announcement|message|email|уведомлен\w*|объявлен\w*|сообщен\w*)",
+        value, re.I,
+    ):
+        return True
+    if re.search(
+        r"\b(?:write|draft|compose|prepare)\b.{0,50}\b(?:a\s+)?(?:polite|friendly|short|brief)\s+(?:email|message|note)\b|"
+        r"\b(?:write|draft|compose|prepare)\b.{0,100}\b(?:email|message|note)\b.{0,100}\b(?:reschedule|schedule|meeting|thank|follow[- ]?up|status update|availability)\b|"
+        r"\b(?:write|draft)\s+(?:a\s+)?(?:unit\s+test|test)\b|"
+        r"(?:напиши|составь|подготовь)\s+(?:вежлив\w*\s+письм\w*|тест\w*)",
         value, re.I,
     ):
         return True
@@ -167,6 +214,39 @@ def is_safe_analysis_request(text: str) -> bool:
         r"(?:request|requesting)\s+(?:access|prod logs?)\s+through\s+sre|"
         r"не\s+обходя\s+права|without\s+bypassing\s+(?:access\s+)?controls",
         value, re.I,
+    ):
+        return True
+    if _SYNTHETIC_DATA_REQUEST.search(value) and not re.search(
+        r"(?:real|actual|production|live|existing).{0,60}(?:customer|personal|user|account).{0,40}(?:data|records?)|"
+        r"(?:реальн\w*|боев\w*|производственн\w*).{0,60}(?:клиент\w*|пользователь\w*|персональн\w*).{0,40}(?:данн\w*|запис\w*)",
+        value, re.I,
+    ):
+        return True
+    if _INFORMATIONAL_QUERY.search(value):
+        return True
+    if re.search(
+        r"(?:analy[sz]e|review|investigate|проанализируй|анализируй|разбери|расследуй).{0,100}(?:logs?|log file|лог\w*|журнал\w*)",
+        value,
+        re.I,
+    ) and not has_explicit_execution(value):
+        return True
+    if re.search(
+        r"(?:show|view|list|покажи|посмотри).{0,80}(?:deployment history|release history|истори\w* развёртыван\w*|истори\w* релиз\w*)",
+        value,
+        re.I,
+    ):
+        return True
+    if re.search(
+        r"(?:detect|identify|recognize|analyze|review|explain|describe|classify|investigate|обнаруж\w*|распозн\w*|проанализируй|проверь|опиши|выдели).{0,120}"
+        r"(?:phishing|phish|social engineering|фишинг|социальн\w* инженер\w*|signs of malware|malware indicators|признак\w* вредоносн\w*)",
+        value,
+        re.I,
+    ):
+        return True
+    if re.search(
+        r"(?:сделай|подготовь|составь).{0,80}(?:сводк\w*).{0,100}(?:инцидент\w*|событи\w*|лог\w*)",
+        value,
+        re.I,
     ):
         return True
     if not _META_TASK.search(value):
@@ -225,21 +305,17 @@ def is_continuation_prompt(text: str) -> bool:
 
 def prepare_history(history: list[dict[str, Any]] | None, current_prompt: str) -> list[dict[str, str]]:
     result: list[dict[str, str]] = []
-    continuation = not is_safe_analysis_request(current_prompt) and is_continuation_prompt(current_prompt)
     for item in history or []:
         if not isinstance(item, dict):
             continue
         role = str(item.get("role", "user")).lower()
-        content = str(item.get("content", ""))
-        if role == "user":
-            if continuation and is_safe_analysis_request(content):
-                content = analysis_surface(content)
-            elif not continuation:
-                content = ""
-        elif role == "assistant":
+        if role != "user":
             continue
+        content = str(item.get("content", ""))
+        if is_safe_analysis_request(content):
+            content = analysis_surface(content)
         if content:
-            result.append({"role": role, "content": content})
+            result.append({"role": "user", "content": content})
     return result
 
 

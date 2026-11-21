@@ -58,7 +58,10 @@ def _model_result(prediction: dict[str, Any], user_prompt: str, analysis_text: s
             "unauthorized_data_access",
         }
         if category not in threat_categories:
-            category = "tool_abuse"
+            return RuleResult(
+                "confirm", "sensitive_action", "medium",
+                "Модель обнаружила риск, но не смогла обоснованно определить категорию угрозы; автоматическая передача запрещена до ручной проверки.",
+            )
         risk_level = _model_risk_level(prediction, category, analysis, "block")
         return RuleResult(
             "block",
@@ -168,6 +171,7 @@ def evaluate_request(user_prompt: str, context: dict[str, Any]) -> tuple[RuleRes
         history=analysis_context["history"],
         normalized_text=prompt_for_analysis,
         user_role=role,
+        target_agent=str(context.get("target_agent") or "it_ops_agent"),
     )
     if rule_result:
         return rule_result, "layer0"

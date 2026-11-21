@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.utils.policy_loader import get_policy
-from app.pipeline.intent import is_safe_analysis_request
+from app.pipeline.intent import _PHISHING_CREDENTIAL_REQUEST, analysis_surface, is_safe_analysis_request
 
 
 @dataclass
@@ -27,8 +27,36 @@ _PATTERNS: dict[str, list[re.Pattern[str]]] = {
         re.compile(r"(?:выведи|[bв]ыbeди).{0,40}(?:свои|cвои|cboи).{0,40}(?:исходн|иcxoд[нh]).{0,40}(?:инструкц|иhctpykц)", re.I),
         re.compile(r"(?:quote|print|show|repeat|процитируй|покажи|выведи).{0,100}(?:verbatim|дословно).{0,120}(?:what (?:is )?written|что (?:у тебя )?написано).{0,120}(?:production|prod|подтвержден|секрет|инструкц)", re.I),
         re.compile(r"(?:print|show|dump|output|reveal|выведи|покажи|раскрой).{0,100}(?:the environment you were started with|startup environment|среду запуска).{0,100}(?:system prompt|developer instructions|system instructions|системн\w* промпт|developer message|скрыт\w* инструкц\w*|api endpoints|keys?)", re.I),
+        re.compile(r"(?:output|dump|print|show|return|export|выведи|выгрузи|верни|покажи).{0,100}(?:your|the hidden|internal|private|system|developer|твою|скрыт\w*|внутренн\w*|системн\w*).{0,100}(?:configuration|config|settings|system prompt|developer instructions|tool list|api keys|конфигурац\w*|настройк\w*|системн\w* промпт|список инструмент\w*|ключ\w*)", re.I),
+        re.compile(r"(?:what is|what are|show me|tell me|покажи|скажи).{0,80}(?:your|hidden|internal|private|твой|твою|скрыт\w*|внутренн\w*).{0,80}(?:system prompt|developer instructions|system message|системн\w* промпт|инструкц\w* разработчик\w*)", re.I),
     ],
     "system_prompt_override": [
+        re.compile(
+            r"(?:change|modify|disable|remove|skip|bypass|turn\s+off|stop\s+enforcing).{0,100}"
+            r"(?:system|security|access|role).{0,80}(?:policy|policies|rules|checks?).{0,120}"
+            r"(?:user_role|role\s+validation|rbac|authorization\s+checks?|access\s+checks?).{0,80}"
+            r"(?:no\s+longer|not\s+run|disabled|skip|bypass|off)", re.I,
+        ),
+        re.compile(
+            r"(?:измен\w*|отключ\w*|обойди|убери|сними).{0,100}"
+            r"(?:системн\w*\s+политик\w*|политик\w*\s+безопасност\w*|правил\w*\s+доступ\w*).{0,120}"
+            r"(?:user_role|провер\w*\s+рол\w*|rbac|провер\w*\s+доступ\w*).{0,100}"
+            r"(?:не\s+выполня\w*|отключ\w*|пропуск\w*|больше\s+не)", re.I,
+        ),
+        re.compile(
+            r"(?:set|change|modify|replace|remove|disable|skip|bypass).{0,100}"
+            r"(?:system|agent|operating).{0,80}(?:rules|policy|instructions).{0,120}"
+            r"(?:accept|trust|honou?r|use).{0,60}(?:any\s+)?(?:user_role|user[- ]supplied\s+roles?|role\s+from\s+the\s+message)", re.I,
+        ),
+        re.compile(
+            r"(?:remove|disable|skip|bypass|turn\s+off).{0,100}"
+            r"(?:mandatory|production|prod|access|role)?\s*(?:approval|confirmation|authorization|access)\s+(?:check|gate|requirement|validation).{0,120}"
+            r"(?:agent|system|operating|policy|instructions)", re.I,
+        ),
+        re.compile(
+            r"(?:change|modify|set|replace).{0,100}(?:agent|system|operating)\s+policy.{0,140}"
+            r"(?:accept|trust|use).{0,60}(?:user[- ]supplied\s+roles?|user_role).{0,80}(?:skip|bypass|remove|disable).{0,50}(?:approval|confirmation|checks?)", re.I,
+        ),
         re.compile(r"(?:your|the)\s+new\s+(?:system\s+prompt|instructions|rules)", re.I),
         re.compile(r"(?:твои|ваши)\s+новые\s+(?:инструкции|правила|системн\w*\s+промпт)", re.I),
         re.compile(r"(?:replace|override|change)\s+(?:your\s+)?(?:system\s+prompt|instructions|rules)", re.I),
@@ -80,6 +108,11 @@ _PATTERNS: dict[str, list[re.Pattern[str]]] = {
     ],
     "data_exfiltration": [
         re.compile(r"(?:send|forward|upload|post|exfiltrat\w*|перешли|отправь|выгрузи|загрузи).{0,100}(?:secrets?|passwords?|tokens?|credentials?|kubeconfig|private keys?|данные|секреты|пароли|токены|ключи).{0,100}(?:https?://|webhook|ngrok|paste\.|external|внешн\w*|почт\w*|@[\w.-]+\.[a-z]{2,})", re.I),
+        re.compile(
+            r"(?:send|forward|email|mail|deliver|перешли|отправь|пошли|перенаправь).{0,120}"
+            r"(?:access credentials|credentials|secrets?|passwords?|tokens?|api keys?|уч[её]тн\w* данн\w*|секрет\w*|парол\w*|токен\w*|ключ\w*).{0,120}"
+            r"(?:personal mailbox|personal email|my mailbox|my email|private email|личн\w* почт\w*|мой почтов\w* ящик|личн\w* ящик)", re.I,
+        ),
         re.compile(r"(?:https?://|webhook|ngrok|paste\.).{0,100}(?:password|secret|token|credential|kubeconfig|парол|секрет|токен|ключ)", re.I),
         re.compile(r"(?:include|embed|put|добавь|включи).{0,80}(?:secrets?|tokens?|passwords?|credentials?|секреты|токены|пароли|ключи).{0,100}(?:url|query|link|ссылк\w*|адрес)", re.I),
         re.compile(r"curl\s+https?://[^\s]+\s+(?:-d|--data).{0,80}(?:secret|token|password|key)", re.I),
@@ -107,6 +140,8 @@ _PATTERNS: dict[str, list[re.Pattern[str]]] = {
     ],
     "harmful_content": [
         re.compile(r"(?:write|create|build|develop|generate|напиши|создай|собери|разработай).{0,100}(?:ransomware|keylogger|malware|spyware|вредоносн\w*|кейлоггер|шифровальщик)", re.I),
+        re.compile(r"(?:how\s+to|how\s+can\s+i|explain\s+how\s+to|help\s+me\s+to)\s+(?:write|create|build|develop|make|install|deploy).{0,80}(?:ransomware|keylogger|malware|spyware|botnet|credential stealer|вредоносн\w*|кейлоггер|шифровальщик|ботнет)", re.I),
+        re.compile(r"(?:как\s+(?:написать|создать|собрать|разработать|сделать|установить)).{0,80}(?:вымогател\w*|вредоносн\w*|кейлоггер|шифровальщик|ботнет|эксплойт)", re.I),
         re.compile(r"(?:keylogger|кейлоггер|spyware|шпионск\w* программ\w*).{0,120}(?:silently|незаметно|stealth|send|отправля|парол)", re.I),
         re.compile(r"(?:rce|remote code execution|удал[её]нн\w* выполнени\w* код\w*).{0,100}(?:exploit|эксплойт|конкурент|чуж\w* сервер|чуж\w* систем)", re.I),
         re.compile(r"(?:write|create|develop|напиши|создай|разработай).{0,80}(?:exploit|эксплойт).{0,100}(?:competitor|чуж\w*|конкурент|steal|взлом)", re.I),
@@ -143,6 +178,11 @@ _ROLE_CLAIMS = [
  ]
 
 _PRIVILEGE_ESCALATION_REQUEST = [
+    re.compile(
+        r"(?:change|set|replace|override|modify)\s+(?:my\s+)?user_role\s*(?:=|to)\s*(?:admin|sre|root|administrator)\b|"
+        r"(?:подмен\w*|замен\w*|измен\w*|установ\w*|назнач\w*).{0,80}(?:мой\s+)?user_role.{0,60}(?:на|to|=)\s*(?:admin|sre|root|administrator)\b",
+        re.I,
+    ),
     re.compile(r"(?:add|make|grant|give)\s+me\s+(?:to\s+)?(?:the\s+)?(?:sudoers|wheel|administrators?|root)\b|(?:добавь|добавить)\s+меня\s+(?:в\s+группу\s+)?(?:sudoers|wheel|администратор\w*|root)", re.I),
     re.compile(r"(?:grant|give|выдай|предоставь)\s+(?:me|мне).{0,50}(?:admin|root|sudo|administrator|администратор\w*)\s+(?:rights|access|privileges|права|доступ)", re.I),
     re.compile(r"(?:treat|consider|regard)\s+(?:me|my account|this user)\s+as\s+(?:user_role\s*=\s*)?(?:admin|sre|root|administrator)|(?:set|change)\s+(?:my\s+)?(?:user_role|role)\s*(?:=|to)\s*(?:admin|sre|root)", re.I),
@@ -150,7 +190,16 @@ _PRIVILEGE_ESCALATION_REQUEST = [
 ]
 
 _ATTACHMENT_DIRECTIVE = re.compile(
-    r"(?:\b(?:ai\s*[- ]?agent\s+instruction|ai assistant|assistant|system)\s*[:,-]|\bfor\s+(?:the\s+)?(?:ai\s+)?assistant\b|\binstructions?\s+for\s+(?:the\s+)?(?:ai\s+)?assistant\b|для\s+ии|ии-ассистент|инструкция\s+для\s+бота|для\s+бота|ассистенту\s*[:,-]|ассистент\s*[,;:]|боту\s*[:,-]|бот\s*[,;:]|<!--\s*ai).{0,240}(?:ignore|reveal|send|forward|upload|export|exfiltrate|extract|copy|post|run|execute|delete|disable|override|игнорируй|отправь|выгрузи|достань|скопируй|выведи|выполни|удали|отключи|раскрой)",
+    r"(?:\b(?:ai\s*[- ]?agent(?:\s+instruction)?|ai\s+assistant|assistant(?:\s+instruction)?|"
+    r"system(?:\s+override|\s+instruction)?|developer(?:\s+instruction)?|model(?:\s+instruction|\s+directive)?)\s*(?:[:,-]|–|—)|"
+    r"\bfor\s+(?:the\s+)?(?:ai|model|assistant|ai\s+agent)\b|"
+    r"\binstructions?\s+for\s+(?:the\s+)?(?:ai|model|assistant|ai\s+agent)\b|"
+    r"для\s+ии|ии-ассистент|инструкци\w*\s+для\s+ассистент\w*|указани\w*\s+для\s+ассистент\w*|"
+    r"инструкция\s+для\s+бота|для\s+бота|ассистенту\s*[:,-]|ассистент\s*[,;:]|боту\s*[:,-]|бот\s*[,;:]|"
+    r"<!--\s*(?:ai|system|assistant|developer|model))"
+    r".{0,240}(?:ignore|reveal|send|forward|upload|export|exfiltrate|extract|copy|post|run|execute|delete|disable|override|"
+    r"skip|bypass|suspend|change|set|grant|treat|assign|replace|disclose|expose|print|show|reveal|выключи|пропусти|обойди|измени|назначь|выдай|считай|"
+    r"игнорируй|отправь|выгрузи|достань|скопируй|выведи|выполни|удали|отключи|раскрой)",
     re.I | re.S,
 )
 
@@ -176,6 +225,20 @@ _UNSAFE_OPERATIONAL_HOWTO = re.compile(
     re.I,
 )
 
+
+_SAFE_FRAUD_ANALYSIS = re.compile(
+    r"(?:detect|identify|recognize|analyze|review|explain|describe|classify|investigate|обнаруж\w*|распозн\w*|проанализируй|проверь|опиши|выдели|расследуй).{0,120}"
+    r"(?:phishing|phish|social engineering|фишинг|социальн\w* инженер\w*)",
+    re.I,
+)
+_FAKE_INVOICE_FRAUD = re.compile(
+    r"(?:write|draft|create|compose|generate|составь|напиши|создай|подготовь).{0,120}"
+    r"(?:fake|fraudulent|false|поддельн\w*|фиктивн\w*).{0,100}"
+    r"(?:vendor invoice|invoice|payment request|сч[её]т|сч[её]т-фактур\w*|плат[её]жн\w* требован\w*).{0,140}"
+    r"(?:redirect|reroute|change bank details|my account|personal account|перенаправ|сменить реквизит|на мой сч[её]т|мои реквизит\w*)",
+    re.I,
+)
+_PATTERNS["fraud_social_engineering"].append(_FAKE_INVOICE_FRAUD)
 _CRITICAL_TOOL_PATTERNS = [
     re.compile(r"(?:force\s+push|git\s+push\s+--force|форсированн\w*\s+push|без\s+истории).{0,80}(?:main|master|prod|production|payments|auth)", re.I),
     re.compile(r"(?:scale|масштабируй).{0,100}(?:production|prod|прод).{0,80}(?:to\s+zero|в\s+ноль|0\s+реплик)", re.I),
@@ -185,14 +248,36 @@ _CRITICAL_TOOL_PATTERNS = [
 
 
 _SECRET_VALUE = re.compile(
-    r"(?:show|print|dump|reveal|output|list|get|fetch|выведи|покажи|раскрой|прочитай|выгрузи|перечисли|получи).{0,100}(?:passwords?|парол\w*|access keys?|aws keys?|secret values?|secret contents?|secrets?.{0,40}(?:values?|contents?)|значени\w* секрет\w*|содержим\w* секрет\w*|токен\w*|credentials?|kubeconfig|private key|переменн\w* окружени\w*).{0,100}(?:prod|production|секрет|password|парол|value|значени|token|ключ|auth|vault)?",
+    r"(?:show|print|dump|reveal|output|list|get|fetch|display|read|extract|выведи|покажи|раскрой|прочитай|выгрузи|перечисли|получи|извлеки).{0,120}"
+    r"(?:passwords?|парол\w*|access keys?|aws secret access keys?|secret values?|secret contents?|secrets?.{0,40}(?:values?|contents?)|"
+    r"значени\w* секрет\w*|содержим\w* секрет\w*|(?:api|access) keys?.{0,30}(?:values?|contents?)|"
+    r"токен\w*|credentials?|kubeconfig|private keys?|"
+    r"environment variables?|переменн\w* окружени\w*|\.env(?: file)?|vault values?).{0,120}"
+    r"(?:prod|production|секрет|password|парол|value|значени|token|ключ|auth|vault|config)?",
     re.I,
 )
 
 
 _ENCODED_SECRET_MARKER = re.compile(
     r"\b(?:password|passwd|secret|token|api[_ -]?key|private[_ -]?key|aws_secret_access_key|authorization)\s*[:=]|"
-    r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\bAKIA[0-9A-Z]{16}\b|\beyJ[A-Za-z0-9_-]{20,}\.",
+    r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|\beyJ[A-Za-z0-9_-]{20,}\.",
+    re.I,
+)
+
+_ATTACHMENT_SECRET_ASSIGNMENT = re.compile(
+    r"\b(?:password|passwd|pwd|secret|token|api[_ -]?key|private[_ -]?key|aws_secret_access_key|client_secret|"
+    r"database_url|db_password|authorization)\s*[:=]\s*[^\s,;]+|"
+    r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|"
+    r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.",
+    re.I,
+)
+
+_SECRET_OUTPUT_REQUEST = re.compile(
+    r"(?:show|print|dump|display|export|extract|copy|reproduce|include|выведи|покажи|распечатай|выгрузи|скопируй|включи|"
+    r"перечисли|отобрази).{0,120}(?:all|every|entire|complete|все|кажд\w*|полност\w*).{0,100}"
+    r"(?:environment variables?|settings?|config(?:uration)?|\.env|переменн\w* окружени\w*|настройк\w*|конфиг\w*)|"
+    r"(?:show|print|dump|display|export|extract|copy|reveal|выведи|покажи|раскрой|прочитай|выгрузи).{0,100}"
+    r"(?:\.env|environment variables?|secret values?|password values?|token values?|содержим\w* секрет\w*|значени\w* секрет\w*)",
     re.I,
 )
 
@@ -203,6 +288,11 @@ _SENSITIVE_ASSET = re.compile(
 )
 _SECRET_ACQUISITION = re.compile(
     r"(?:read|show|fetch|get|retrieve|dump|extract|export|collect|find|print|list|выведи|покажи|прочитай|получи|найди|выгрузи|собери|достань|извлеки|скопируй)",
+    re.I,
+)
+_UNAUTHORIZED_DATA_REQUEST = re.compile(
+    r"(?:read|dump|export|extract|retrieve|fetch|collect|list all|download|выгрузи|извлеки|получи|прочитай|собери|выведи).{0,120}"
+    r"(?:customer records?|customer database|personal data|user records?|персональн\w* данн\w*|данн\w* клиент\w*|запис\w* пользовател\w*)",
     re.I,
 )
 _SECRET_TRANSFER = re.compile(
@@ -241,36 +331,56 @@ def _is_multi_step_exfiltration(
     user_turns = [
         str(item.get("content", "")) for item in history
         if isinstance(item, dict) and str(item.get("role", "user")).lower() == "user"
-    ][-8:]
+    ][-12:]
     attachment_text = "\n".join(
         str(item.get("content", "")) for item in (attachments or []) if isinstance(item, dict)
     )
-    prior_context = "\n".join([*user_turns, attachment_text])
     prior_collection = (
         any(_SENSITIVE_ASSET.search(turn) and _SECRET_ACQUISITION.search(turn) for turn in user_turns)
         or bool(_SENSITIVE_ASSET.search(attachment_text))
     )
-    if not prior_collection or not _SECRET_TRANSFER.search(current_prompt):
+    if not prior_collection:
         return False
-    destination_text = "\n".join([prior_context, current_prompt])
-    return _has_external_destination(destination_text)
+
+    current_has_transfer = bool(_SECRET_TRANSFER.search(current_prompt))
+    current_has_destination = _has_external_destination(current_prompt)
+    prior_transfer_destination = any(
+        _SECRET_TRANSFER.search(turn) and _has_external_destination(turn)
+        for turn in user_turns
+    )
+    current_continues = bool(re.search(
+        r"\b(?:it|them|that|those|the archive|the export|the dump)\b|"
+        r"\b(?:do it|go ahead|proceed|continue|send it|upload it)\b|"
+        r"(?:сделай это|выполни это|продолжай|отправь это|перешли это)",
+        current_prompt,
+        re.I,
+    ))
+    return (
+        current_has_transfer and current_has_destination
+    ) or (
+        current_has_transfer and prior_transfer_destination
+    ) or (
+        current_continues and prior_transfer_destination
+    )
 
 
 _SECRET_NAME_REQUEST = re.compile(
-    r"(?:show|display|покажи|выведи).{0,60}(?:secret names|names of secrets|имена секретов|названия секретов)|(?:list|enumerate|перечисли).{0,40}(?:secrets?|секреты)",
+    r"(?:show|display|покажи|выведи).{0,80}(?:secret names|names of secrets|list of secret names|имена секретов|названия секретов|список.{0,20}им[её]н.{0,20}секрет)|"
+    r"(?:list|enumerate|перечисли).{0,50}(?:secrets?|секреты|api keys?|access key names|имена ключей)",
     re.I,
 )
 
 _SECRET_ACCESS_REQUEST = re.compile(
-    r"(?:read|show|access|dump|list|get|fetch|покажи|прочитай|получи|выведи|перечисли).{0,70}(?:secrets?|secret store|vault|секрет\w*|хранилищ\w* секрет\w*)",
+    r"(?:read|show|access|dump|list|get|fetch|покажи|прочитай|получи|выведи|перечисли).{0,100}"
+    r"(?:secrets?|secret store|vault|секрет\w*|хранилищ\w* секрет\w*|environment variables?|\.env|переменн\w* окружени\w*|api keys?|access keys?)",
     re.I,
 )
 
 _TOOL_PATTERNS = {
-    "read_logs": re.compile(r"(?:\b(?:show|read|view|tail|print|fetch|display|dump)\b.{0,60}\b(?:logs?|audit logs?)\b|\b(?:logs?|журнал\w*)\b.{0,70}\b(?:show|read|view|tail|print|fetch|display|покажи|прочитай|выведи|посмотри)\b|(?:покажи|прочитай|выведи|посмотри|получи).{0,60}(?:логи|журнал\w*))", re.I),
+    "read_logs": re.compile(r"(?:\b(?:show|read|view|tail|print|fetch|display|dump|check|inspect|analyze)\b.{0,60}\b(?:logs?|audit logs?)\b|\b(?:logs?|журнал\w*)\b.{0,70}\b(?:show|read|view|tail|print|fetch|display|покажи|прочитай|выведи|посмотри|проверь|проанализируй)\b|(?:покажи|прочитай|выведи|посмотри|получи|проверь|проанализируй).{0,60}(?:логи|журнал\w*))", re.I),
     "restart_service": re.compile(r"\b(?:restart|reboot|roll\s*back|rollback|scale)\b|(?:перезапуст\w*|перезапуск\w*|откат\w*|масштабируй|масштабирован\w*)", re.I),
     "delete_resource": re.compile(r"\b(?:delete|remove|destroy|drop)\b|(?:удали|удалить|удаление|уничтож\w*|снеси)\b|\brm\s+-rf\b", re.I),
-    "run_shell": re.compile(r"(?:\brun_shell\b|\brun\s+(?:this\s+)?command\b|\bexecute\s+(?:this\s+)?command\b|\brun\s+(?:a\s+)?shell\b|\bshell\s+(?:on|in|at)\b|\bdiagnostic\s+shell\s+command\b|\bopen\s+(?:a\s+)?shell\b|\brun\s+on\b|\bexecute\s+on\b|выполни\s+(?:команду|на)|запусти\s+(?:команду|на)|выполни\s+`?[a-z][\w.-]*\s+-|\b(?:df\s+-h|iptables\s+-|chmod\s+-|kubectl\s+delete|systemctl\s+(?:stop|restart)|kill\s+(?:process\s+)?(?:-\w+\s+)?\d+|pkill\s+|killall\s+|stop\s+process\s+\d+)\b|\b(?:set|export)\s+[A-Z][A-Z0-9_]*\s*=|(?:поставь|установи|измени)\s+[A-Z][A-Z0-9_]*\s*=|(?:migrate|migration|deploy|apply|миграц\w*|разверни|примени).{0,100}(?:prod|production|k8s-prod|прод))", re.I),
+    "run_shell": re.compile(r"(?:\brun_shell\b|\brun\s+(?:this\s+)?command\b|\bexecute\s+(?:this\s+)?command\b|\b(?:execute|run)\s+(?:a\s+)?(?:maintenance|diagnostic)\s+shell\s+command\b|\brun\s+(?:a\s+)?shell\b|\bshell\s+(?:on|in|at)\b|\bdiagnostic\s+shell\s+command\b|\bmaintenance\s+shell\s+command\b|\bopen\s+(?:a\s+)?shell\b|\brun\s+on\b|\bexecute\s+on\b|выполни\s+(?:команду|на|проверку|проверку\s+статуса)|запусти\s+(?:команду|на)|выполни\s+`?[a-z][\w.-]*\s+-|\b(?:df\s+-h|iptables\s+-|chmod\s+-|kubectl\s+(?:delete|get)|systemctl\s+(?:status|stop|restart)|service\s+\w+\s+status|curl\s+-[iI]|curl\s+https?://|ping\s+-c|kill\s+(?:process\s+)?(?:-\w+\s+)?\d+|pkill\s+|killall\s+|stop\s+process\s+\d+)\b|\b(?:check|verify|test)\s+(?:the\s+)?(?:service\s+)?(?:availability|health|http\s+status)\b|(?:проверь|проверить|проверка).{0,60}(?:доступност\w*|здоровь\w*|состояни\w*|статус\w*)|\b(?:set|export)\s+[A-Z][A-Z0-9_]*\s*=|(?:поставь|установи|измени)\s+[A-Z][A-Z0-9_]*\s*=|(?:\bmigrate\b|\bmigration\b|\bdeploy\b|\bapply\b|миграц\w*|разверни|примени).{0,100}(?:prod|production|k8s-prod|прод))", re.I),
 }
 
 _RESOURCE_RE = re.compile(r"(?<![\w])(?:[a-z0-9][a-z0-9._-]{2,})(?![\w])", re.I)
@@ -296,16 +406,18 @@ def check_privilege_claim(user_prompt: str, user_role: str) -> bool:
     return _role_claim_mismatch(user_prompt, user_role.lower())
 
 
-def _detect_environment(text: str, policy: dict[str, Any]) -> str:
+def _detect_environment(text: str, policy: dict[str, Any], target_agent: str = "it_ops_agent") -> str:
     explicit_prod = bool(re.search(r"\b(?:production|prod)\b|прод(?:акшн)?", text, re.I))
     explicit_nonprod = bool(re.search(r"\b(?:non.?prod|development|dev|stage|staging|test|testing)\b|\b(?:разработк|тестов|стейдж)\w*", text, re.I))
-    env_patterns = policy.get("agents", {}).get("it_ops_agent", {}).get("environments", {})
+    env_patterns = policy.get("agents", {}).get(target_agent, {}).get("environments", {})
     resources = _RESOURCE_RE.findall(text)
+    compatibility_patterns = policy.get("compatibility", {}).get("nonprod_resource_patterns", [])
     inferred_prod = False
     inferred_nonprod = False
     for resource in resources:
-        if resource.lower().startswith("feature-"):
-            inferred_nonprod = True
+        for pattern in compatibility_patterns:
+            if fnmatch.fnmatch(resource.lower(), str(pattern).lower()):
+                inferred_nonprod = True
         for pattern in env_patterns.get("prod", []):
             if fnmatch.fnmatch(resource.lower(), str(pattern).lower()):
                 inferred_prod = True
@@ -338,8 +450,14 @@ def _detect_tool(text: str) -> str | None:
     return None
 
 
-def _resolve_policy_rule(role: str, tool: str, environment: str, policy: dict[str, Any]) -> str:
-    agent = policy.get("agents", {}).get("it_ops_agent", {})
+def _resolve_policy_rule(
+    role: str,
+    tool: str,
+    environment: str,
+    policy: dict[str, Any],
+    target_agent: str = "it_ops_agent",
+) -> str:
+    agent = policy.get("agents", {}).get(target_agent, {})
     role_policy = agent.get("roles", {}).get(role, {})
     rule = role_policy.get("tools", {}).get(tool)
     if rule is None:
@@ -390,9 +508,10 @@ def _risk_for_category(category: str, text: str = "") -> str:
     if category == "sensitive_action":
         delete_action = re.search(r"\b(?:delete|remove|destroy|drop)\b|удал\w*|уничтож\w*", text, re.I)
         resource_type = re.search(r"\b(?:bucket|volume|namespace)\b|бакет|том|неймспейс|пространств\w+ имен", text, re.I)
-        nonprod = re.search(r"\b(?:dev|stage|staging|test|testing|qa)\b|feature-[\w-]+|tmp-test|разработк\w*|тестов\w*|стейдж\w*", text, re.I)
-        production = re.search(r"\b(?:prod|production)\b|прод(?:акшн)?|[-_]prod(?:[-_.:]|$)", text, re.I)
-        if delete_action and resource_type and not nonprod and (production or re.search(r"\bbucket\b|бакет", text, re.I)):
+        environment = _detect_environment(text, get_policy())
+        if delete_action and resource_type and environment != "nonprod" and (
+            environment == "prod" or re.search(r"\bbucket\b|бакет", text, re.I)
+        ):
             return "high"
         return "medium"
     if category == "none":
@@ -402,7 +521,8 @@ def _risk_for_category(category: str, text: str = "") -> str:
 
 def check_always_block(user_prompt: str, attachments: list[dict[str, Any]] | None = None,
                        history: list[dict[str, Any]] | None = None,
-                       normalized_text: str | None = None, user_role: str = "unknown") -> RuleResult | None:
+                       normalized_text: str | None = None, user_role: str = "unknown",
+                       target_agent: str = "it_ops_agent") -> RuleResult | None:
     policy = get_policy()
     attachments = attachments or []
     history = history or []
@@ -470,23 +590,37 @@ def check_always_block(user_prompt: str, attachments: list[dict[str, Any]] | Non
     scan_combined = "\n".join(
         [scan_user_segment(prompt_text), *(scan_user_segment(turn) for turn in user_turns)]
     )
-    if _STEALTH_AUDIT_SCRIPT.search("\n".join([prompt_text, *user_turns])):
+    forbidden_actions = policy.get("agents", {}).get(target_agent, {}).get("forbidden_actions", [])
+    if (
+        "disable_audit_or_wipe_logs" in forbidden_actions
+        and _STEALTH_AUDIT_SCRIPT.search("\n".join([prompt_text, *user_turns]))
+    ):
         return RuleResult(
-            "block", "harmful_content", "critical",
-            "Запрошено создание скрытого инструмента для удаления аудита или журналов; такой инструмент не может быть передан целевому агенту.",
+            "block", "tool_abuse", "critical",
+            "Запрошено создание скрытого инструмента для удаления аудита или журналов; такое действие запрещено политикой.",
         )
 
     unsafe_howto_sources = [segment for segment in [user_prompt, *user_turns]
                             if _UNSAFE_OPERATIONAL_HOWTO.search(segment) and not is_safe_analysis_request(segment)]
     if unsafe_howto_sources:
         unsafe_text = "\n".join(unsafe_howto_sources)
-        if re.search(r"\b(?:exfiltrat\w*|steal|send\s+secrets?|extract\s+passwords?|harvest\s+credentials)\b|(?:эксфильтр\w*|украсть\w*|извлечь\s+пароли)", unsafe_text, re.I):
+        if (
+            "data_exfiltration" in policy.get("always_block", [])
+            and re.search(r"\b(?:exfiltrat\w*|steal|send\s+secrets?|extract\s+passwords?|harvest\s+credentials)\b|(?:эксфильтр\w*|украсть\w*|извлечь\s+пароли)", unsafe_text, re.I)
+        ):
             return RuleResult("block", "data_exfiltration", "critical", "Запрошена операционная инструкция по извлечению или выводу чувствительных данных; такая деятельность запрещена политикой.")
-        if re.search(r"\b(?:disable\s+audit|wipe\s+logs?|hide\s+traces)\b|(?:отключить\s+аудит|стереть\s+логи)", unsafe_text, re.I):
+        if (
+            "disable_audit_or_wipe_logs" in forbidden_actions
+            and re.search(r"\b(?:disable\s+audit|wipe\s+logs?|hide\s+traces)\b|(?:отключить\s+аудит|стереть\s+логи)", unsafe_text, re.I)
+        ):
             return RuleResult("block", "tool_abuse", "critical", "Запрошена инструкция по отключению аудита или сокрытию следов; такое действие запрещено политикой.")
-        if re.search(r"\b(?:steal|harvest\s+credentials|phish)\b|(?:украсть\w*\s+(?:парол|уч[её]тн)|фишинг)", unsafe_text, re.I):
+        if (
+            "fraud_social_engineering" in policy.get("always_block", [])
+            and re.search(r"\b(?:steal|harvest\s+credentials|phish)\b|(?:украсть\w*\s+(?:парол|уч[её]тн)|фишинг)", unsafe_text, re.I)
+        ):
             return RuleResult("block", "fraud_social_engineering", "high", "Запрос направлен на получение чужих учётных данных или обход средств защиты.")
-        return RuleResult("block", "harmful_content", "critical", "Запрошена операционная инструкция по эксплуатации уязвимости или обходу защитных механизмов вне безопасного аналитического контекста.")
+        if "harmful_content" in policy.get("always_block", []):
+            return RuleResult("block", "harmful_content", "critical", "Запрошена операционная инструкция по эксплуатации уязвимости или обходу защитных механизмов вне безопасного аналитического контекста.")
     explicit_execution = bool(re.search(
         r"(?:^|[.!?;]\s*|\b(?:and then|then|now)\s+)(?:please\s+)?"
         r"(?:run|execute|deploy|apply|restart|reboot|delete|remove|destroy|drop|disable|wipe|erase|send|upload|forward|"
@@ -520,7 +654,7 @@ def check_always_block(user_prompt: str, attachments: list[dict[str, Any]] | Non
     if "data_exfiltration" in policy.get("always_block", []) and _is_multi_step_exfiltration(prompt_text, history, attachments):
         return RuleResult("block", "data_exfiltration", "critical", "История и текущий запрос образуют многошаговую попытку извлечения чувствительных данных и передачи их на внешний адрес.")
 
-    if re.search(
+    if "add_ssh_keys_or_sudoers_via_chat" in forbidden_actions and re.search(
         r"(?:add|append|insert|replace|добавь|добавить|вставь|замени).{0,140}(?:ssh key|authorized_keys|ssh-ключ|ключ.{0,30}root)|"
         r"(?:authorized_keys).{0,140}(?:add|append|insert|replace|добавь|добавить|вставь|замени)",
         scan_combined,
@@ -536,8 +670,24 @@ def check_always_block(user_prompt: str, attachments: list[dict[str, Any]] | Non
             level = _risk_for_category(category, scan_combined)
             return RuleResult("block", category, level, f"Обнаружена попытка {category.replace('_', ' ')}; вход не передаётся целевому агенту.")
 
-    if "fraud_social_engineering" in policy.get("always_block", []) and _has_any(scan_combined, _PATTERNS["fraud_social_engineering"]):
-        return RuleResult("block", "fraud_social_engineering", "high", "Запрос направлен на фишинг, подмену личности или получение чужих учётных данных.")
+    if "fraud_social_engineering" in policy.get("always_block", []):
+        fraud_detected = False
+        fraud_segments = [
+            (prompt_text, user_prompt),
+            *[(scan_user_segment(turn), turn) for turn in user_turns],
+        ]
+        for scanned_segment, original_segment in fraud_segments:
+            safe_fraud_analysis = bool(
+                _SAFE_FRAUD_ANALYSIS.search(original_segment)
+                and is_safe_analysis_request(original_segment)
+                and not _FAKE_INVOICE_FRAUD.search(original_segment)
+                and not _PHISHING_CREDENTIAL_REQUEST.search(original_segment)
+            )
+            if not safe_fraud_analysis and _has_any(scanned_segment, _PATTERNS["fraud_social_engineering"]):
+                fraud_detected = True
+                break
+        if fraud_detected:
+            return RuleResult("block", "fraud_social_engineering", "high", "Запрос направлен на фишинг, подмену личности или получение чужих учётных данных.")
 
     exfil_scan = f"{scan_combined}\n{attachment_text}"
     tunnel_exposure = bool(_INTERNAL_SERVICE_TUNNEL.search(exfil_scan) and _SHARE_TUNNEL_LINK.search(exfil_scan))
@@ -550,7 +700,7 @@ def check_always_block(user_prompt: str, attachments: list[dict[str, Any]] | Non
     if "abuse" in policy.get("always_block", []) and _has_any(scan_combined, _PATTERNS["abuse"]):
         return RuleResult("block", "abuse", "low", "Запрос направлен на угрозы, травлю, унижение или дискриминационные высказывания.")
 
-    forbidden = policy.get("agents", {}).get("it_ops_agent", {}).get("forbidden_actions", [])
+    forbidden = policy.get("agents", {}).get(target_agent, {}).get("forbidden_actions", [])
     if not educational_safe and any(action in _FORBIDDEN_ACTIONS and _FORBIDDEN_ACTIONS[action].search(scan_combined) for action in forbidden):
         return RuleResult("block", "tool_abuse", "critical", "Запрошено действие, запрещённое для всех ролей политикой безопасности.")
     if not educational_safe and _has_any(scan_combined, _CRITICAL_TOOL_PATTERNS):
@@ -588,31 +738,57 @@ def check_rbac(user_prompt: str, context: dict[str, Any], normalized_text: str |
     if continuation and history_user:
         text = "\n".join(history_user[-2:]) + "\n" + text
 
-    safe_rotation = bool(re.search(
-        r"(?:rotate|revoke|invalidate|replace|renew|отозвать|отзови|отзыв\w*|ротац\w*|перевыпуст\w*).{0,100}"
-        r"(?:aws access key|access key|api key|secret|token|credential|ключ\w*|секрет\w*|токен\w*)",
-        text,
-        re.I,
-    ))
-    if safe_rotation and not _SECRET_VALUE.search(text) and not _SECRET_TRANSFER.search(text) and not _EXTERNAL_DESTINATION.search(text):
-        return None
-
-    if _ENCODED_SECRET_MARKER.search(text):
-        return RuleResult("block", "unauthorized_data_access", "high", "После нормализации обнаружен маркер значения секрета или токена; раскрытие таких данных запрещено политикой.")
-    if _SECRET_VALUE.search(text):
-        return RuleResult("block", "unauthorized_data_access", "high", "Запрошено раскрытие значения секрета; политика запрещает выдачу значений секретов для всех ролей.")
-
     role_policy = policy.get("agents", {}).get(target_agent, {}).get("roles", {}).get(role, {})
     secret_rule = role_policy.get("secrets", "deny")
-    if _SECRET_NAME_REQUEST.search(text):
-        if secret_rule == "deny":
-            return RuleResult("block", "unauthorized_data_access", "high", f"Политика запрещает роли {role} обращаться к секретам, включая их имена.")
-        if secret_rule == "names_only":
-            return RuleResult("allow", "none", "none", f"Для роли {role} разрешён просмотр только имён секретов; значения секретов не раскрываются.")
-    elif _SECRET_ACCESS_REQUEST.search(text):
-        return RuleResult("block", "unauthorized_data_access", "high", f"Запрос к содержимому или неопределённому набору секретов запрещён для роли {role}.")
+    secret_segments = []
+    for segment in [*history_user, text]:
+        safe_analysis_segment = is_safe_analysis_request(segment)
+        if safe_analysis_segment:
+            segment = analysis_surface(segment)
+        secret_segments.append((segment, safe_analysis_segment))
 
-    environment = _detect_environment(text, policy)
+    names_only_requested = False
+    for segment, safe_analysis_segment in secret_segments:
+        if not safe_analysis_segment and _UNAUTHORIZED_DATA_REQUEST.search(segment):
+            return RuleResult("block", "unauthorized_data_access", "high", "Запрошено извлечение пользовательских или клиентских данных, не входящих в разрешённые операции целевого DevOps-агента.")
+        safe_rotation = bool(re.search(
+            r"(?:rotate|revoke|invalidate|replace|renew|отозвать|отзови|отзыв\w*|ротац\w*|перевыпуст\w*).{0,100}"
+            r"(?:aws access key|access key|api key|secret|token|credential|ключ\w*|секрет\w*|токен\w*)",
+            segment,
+            re.I,
+        ))
+        secret_value_scan = re.sub(
+            r"(?:do not|don't|never|without)\s+(?:reveal|show|print|display|output|disclose)\b.{0,80}",
+            " ", segment, flags=re.I,
+        )
+        secret_value_scan = re.sub(
+            r"(?:не\s+(?:показывай|раскрывай|выводи|печатай)|без\s+(?:раскрытия|вывода|показа))\b.{0,80}",
+            " ", secret_value_scan, flags=re.I,
+        )
+        if _ENCODED_SECRET_MARKER.search(segment) or _SECRET_VALUE.search(secret_value_scan):
+            return RuleResult("block", "unauthorized_data_access", "high", "Обнаружен маркер значения секрета или запрос на раскрытие его содержимого; политика запрещает выдачу значений секретов.")
+        if _SECRET_NAME_REQUEST.search(segment):
+            if secret_rule == "deny":
+                return RuleResult("block", "unauthorized_data_access", "high", f"Политика запрещает роли {role} обращаться к секретам, включая их имена.")
+            names_only_requested = True
+            continue
+        if _SECRET_ACCESS_REQUEST.search(segment) and not (
+            safe_rotation
+            and not _SECRET_TRANSFER.search(segment)
+            and not _EXTERNAL_DESTINATION.search(segment)
+        ):
+            return RuleResult("block", "unauthorized_data_access", "high", f"Запрос к содержимому или неопределённому набору секретов запрещён для роли {role}.")
+
+    if names_only_requested and _SECRET_NAME_REQUEST.search(text) and not _SECRET_TRANSFER.search(text):
+        return RuleResult("allow", "none", "none", f"Для роли {role} разрешён просмотр только имён секретов; значения секретов не раскрываются.")
+
+    attachment_text = "\n".join(
+        str(item.get("content", "")) for item in context.get("attachments", []) if isinstance(item, dict)
+    )
+    if _SECRET_OUTPUT_REQUEST.search(text) and _ATTACHMENT_SECRET_ASSIGNMENT.search(attachment_text):
+        return RuleResult("block", "unauthorized_data_access", "high", "Запрошен вывод всех параметров конфигурации, содержащей значения секретов; раскрытие таких значений запрещено.")
+
+    environment = _detect_environment(text, policy, target_agent)
     sql_drop_table = bool(re.search(r"\bDROP\s+TABLE\b", text, re.I))
     explanatory_sql = bool(re.search(r"\b(?:explain|describe|what\s+(?:is|does)|how\s+does|why|analy[sz]e|review|translate|classify)\b|(?:объясни|расскажи|что\s+(?:такое|делает)|почему|проанализируй|переведи)", user_prompt, re.I))
     test_scope = bool(re.search(r"\b(?:dev|development|stage|staging|test|testing|qa|non.?prod)\b|(?:test|tmp|qa|dev)[_-]\w+|(?:тестов\w*|разработк\w*|стейдж)", text, re.I))
@@ -625,7 +801,7 @@ def check_rbac(user_prompt: str, context: dict[str, Any], normalized_text: str |
     if role not in {"developer", "sre", "admin"}:
         return RuleResult("block", "unauthorized_data_access", "high", "Доверенная роль пользователя отсутствует или не поддерживается политикой.")
 
-    rule = _resolve_policy_rule(role, tool, environment, policy)
+    rule = _resolve_policy_rule(role, tool, environment, policy, target_agent)
     if rule in {"deny", "block"}:
         category = "unauthorized_data_access" if tool == "read_logs" else "tool_abuse"
         env_label = "production" if environment == "prod" else "неопределённом окружении" if environment == "unknown" else "non-production"

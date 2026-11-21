@@ -44,26 +44,22 @@ def extract_features_text(
         f"ATTACHMENT_TYPE_{item.get('type', 'document')} ATTACHMENT_NAME_{item.get('name', '')} {item.get('content', '')}"
         for item in attachments if isinstance(item, dict)
     )
-    has_base64 = bool(re.search(r'(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{8,}={0,2}(?![A-Za-z0-9+/])', user_prompt))
-    url_pattern = r'https?://|www\.'
-    has_url = bool(re.search(url_pattern, user_prompt, re.I))
     flags = [
         f"ROLE_{role}",
         f"HAS_ATTACHMENT_{int(bool(attachments))}",
         f"HISTORY_LEN_{min(len(history), 10)}",
-        f"HAS_URL_{int(has_url)}",
+        f"HAS_URL_{int(bool(re.search(r'https?://|www\\.', user_prompt, re.I)))}",
+        f"HAS_BASE64_{int(bool(re.search(r'(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{8,}={0,2}(?![A-Za-z0-9+/])', user_prompt)))}",
         f"HAS_CODE_{int('```' in user_prompt)}",
-        f"HAS_PROD_{int(bool(re.search(r'production|prod|прод', user_prompt, re.I)))}",
+        f"HAS_PROD_{int(bool(re.search(r'production|\\bprod\\b|прод', user_prompt, re.I)))}",
         f"CYRILLIC_{int(sum('а' <= ch.lower() <= 'я' for ch in prompt) > max(1, len(prompt) * 0.3))}",
-        f"HAS_BASE64_{int(has_base64)}",
     ]
     return (
         " ".join(flags)
-        + "\nCURRENT\n" + prompt
-        + "\nHISTORY\n" + history_text
-        + "\nATTACHMENTS\n" + attachment_text
+        + "\\nCURRENT\\n" + prompt
+        + "\\nHISTORY\\n" + history_text
+        + "\\nATTACHMENTS\\n" + attachment_text
     )
-
 
 
 def load_classifier(path: str | Path | None = None) -> dict[str, Any] | None:
@@ -110,7 +106,7 @@ def predict(
     decision = str(decision_model.classes_[decision_index])
     decision_confidence = float(decision_probs[decision_index])
 
-    category_candidate = "tool_abuse"
+    category_candidate = "none"
     category_candidate_confidence = 0.0
     category_probs: list[float] = []
     category_model = _classifier_bundle.get("categories")

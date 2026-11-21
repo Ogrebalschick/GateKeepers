@@ -45,7 +45,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Astra Guard ML Service", version="2.4.0", lifespan=lifespan)
+app = FastAPI(title="Astra Guard ML Service", version="2.5.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

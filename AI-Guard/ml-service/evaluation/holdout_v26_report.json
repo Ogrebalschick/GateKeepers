@@ -1,38 +1,38 @@
 {
   "evaluator_version": "2.0",
-  "n": 500,
+  "n": 87,
   "invalid_or_timeout": 0,
-  "balanced_cost_score": 1.0,
+  "balanced_cost_score": 0.9162299360831945,
   "latency_penalty": 0,
-  "score": 1.0,
-  "automatic_points_out_of_70": 70.0,
+  "score": 0.9162299360831945,
+  "automatic_points_out_of_70": 64.1360955258236,
   "eligible_for_prizes": true,
-  "strict_block_recall_high_critical": 1.0,
+  "strict_block_recall_high_critical": 0.9230769230769231,
   "containment_recall_high_critical": 1.0,
-  "precision_danger_block": 1.0,
-  "recall_danger_block": 1.0,
-  "f1_danger_block": 1.0,
-  "macro_f1_decisions": 1.0,
-  "hard_negative_block_rate": 0.0,
-  "unnecessary_confirmation_rate": 0.0,
-  "risk_category_accuracy": 1.0,
+  "precision_danger_block": 0.8913043478260869,
+  "recall_danger_block": 0.9111111111111111,
+  "f1_danger_block": 0.9010989010989011,
+  "macro_f1_decisions": 0.8601789866157682,
+  "hard_negative_block_rate": 0.16666666666666666,
+  "unnecessary_confirmation_rate": 0.06666666666666667,
+  "risk_category_accuracy": 0.7931034482758621,
   "responses_missing_explanation_fields": 0,
   "recall_by_category_block": {
-    "abuse": 1.0,
+    "abuse": 0.6666666666666666,
     "data_exfiltration": 1.0,
-    "fraud_social_engineering": 1.0,
+    "fraud_social_engineering": 0.6666666666666666,
     "harmful_content": 1.0,
     "indirect_injection": 1.0,
     "jailbreak": 1.0,
     "privilege_escalation": 1.0,
     "prompt_injection": 1.0,
     "system_prompt_extraction": 1.0,
-    "system_prompt_override": 1.0,
+    "system_prompt_override": 0.5,
     "tool_abuse": 1.0,
     "unauthorized_data_access": 1.0
   },
   "recall_by_category_contained": {
-    "abuse": 1.0,
+    "abuse": 0.6666666666666666,
     "data_exfiltration": 1.0,
     "fraud_social_engineering": 1.0,
     "harmful_content": 1.0,
@@ -45,17 +45,21 @@
     "tool_abuse": 1.0,
     "unauthorized_data_access": 1.0
   },
-  "latency_p95_ms": 23.150499968323857,
-  "latency_mean_ms": 10.782333599287085,
+  "latency_p95_ms": 6.652561000009882,
+  "latency_mean_ms": 4.202183275961504,
   "confusion_matrix": {
     "allow": {
-      "allow": 264
+      "allow": 23,
+      "block": 5,
+      "confirm": 2
     },
     "confirm": {
-      "confirm": 36
+      "confirm": 12
     },
     "block": {
-      "block": 200
+      "block": 41,
+      "confirm": 3,
+      "allow": 1
     }
   },
   "cpu_bonus_timing_and_quality_candidate": true,

@@ -1,21 +1,22 @@
 {
-  "model_version": "2.4.0",
+  "model_version": "2.5.0",
   "classifier": "SGDClassifier(loss=log_loss)",
   "vectorizer": "FeatureUnion(TfidfVectorizer word 1-2, char_wb 2-5)",
-  "training_rows": 500,
+  "training_rows": 884,
   "public_training_rows": 500,
-  "augmented_training_rows": 0,
+  "augmented_training_rows": 384,
   "training_sources": [
-    "astra_public_v2/dev.jsonl"
+    "astra_public_v2/dev.jsonl",
+    "data/augmentation_v25.jsonl"
   ],
   "seed": 42,
   "group_similarity_threshold": 0.85,
-  "group_count": 414,
-  "validation_size": 101,
+  "group_count": 541,
+  "validation_size": 177,
   "validation": {
     "decisions": {
-      "macro_f1": 0.8327,
-      "evaluation_rows": 101,
+      "macro_f1": 0.9086,
+      "evaluation_rows": 177,
       "labels": [
         "allow",
         "block",
@@ -23,25 +24,25 @@
       ],
       "confusion_matrix": [
         [
-          48,
-          5,
+          73,
+          8,
           0
         ],
         [
-          3,
-          36,
+          2,
+          76,
           1
         ],
         [
           2,
           1,
-          5
+          14
         ]
       ]
     },
     "risk_levels": {
-      "macro_f1": 0.503,
-      "evaluation_rows": 48,
+      "macro_f1": 0.7174,
+      "evaluation_rows": 96,
       "labels": [
         "critical",
         "high",
@@ -50,34 +51,34 @@
       ],
       "confusion_matrix": [
         [
-          6,
           7,
-          0,
-          1
-        ],
-        [
-          1,
-          20,
-          0,
-          1
-        ],
-        [
-          0,
-          1,
+          12,
           0,
           0
         ],
         [
+          1,
+          49,
           0,
-          4,
+          3
+        ],
+        [
           0,
-          7
+          1,
+          5,
+          0
+        ],
+        [
+          0,
+          8,
+          0,
+          10
         ]
       ]
     },
     "categories": {
-      "macro_f1": 0.438,
-      "accuracy": 0.7426,
+      "macro_f1": 0.7151,
+      "accuracy": 0.7595,
       "labels": [
         "abuse",
         "data_exfiltration",
@@ -85,10 +86,8 @@
         "harmful_content",
         "indirect_injection",
         "jailbreak",
-        "none",
         "privilege_escalation",
         "prompt_injection",
-        "sensitive_action",
         "system_prompt_extraction",
         "system_prompt_override",
         "tool_abuse",
@@ -96,11 +95,23 @@
       ],
       "confusion_matrix": [
         [
+          6,
           0,
           0,
           0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          4,
           1,
-          0,
           0,
           0,
           0,
@@ -114,11 +125,9 @@
         [
           0,
           0,
+          4,
           0,
           0,
-          0,
-          0,
-          1,
           0,
           0,
           0,
@@ -128,41 +137,10 @@
           0
         ],
         [
-          0,
-          0,
           2,
           0,
           0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
-          4,
-          0,
-          1,
-          4,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        [
-          0,
-          1,
-          0,
+          3,
           0,
           5,
           0,
@@ -170,6 +148,17 @@
           0,
           0,
           0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          6,
+          0,
+          0,
+          0,
           0,
           0,
           0,
@@ -182,10 +171,8 @@
           0,
           0,
           2,
-          3,
           0,
-          0,
-          0,
+          2,
           0,
           0,
           0,
@@ -198,9 +185,7 @@
           0,
           0,
           0,
-          52,
-          0,
-          0,
+          3,
           0,
           0,
           0,
@@ -214,11 +199,9 @@
           0,
           0,
           0,
-          2,
           0,
+          9,
           1,
-          0,
-          0,
           0,
           0,
           0
@@ -232,14 +215,13 @@
           0,
           0,
           0,
-          3,
+          8,
           0,
           0,
-          0,
-          1,
           0
         ],
         [
+          0,
           0,
           0,
           0,
@@ -248,26 +230,7 @@
           0,
           2,
           0,
-          0,
-          5,
-          0,
-          0,
-          1,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          2,
-          0,
-          0,
-          0,
-          0,
-          0,
+          6,
           0,
           0
         ],
@@ -280,12 +243,10 @@
           0,
           0,
           0,
+          1,
           0,
           0,
-          0,
-          0,
-          0,
-          0
+          3
         ],
         [
           0,
@@ -294,41 +255,24 @@
           0,
           0,
           0,
-          2,
           0,
           0,
           1,
           0,
           0,
-          2,
-          0
-        ],
-        [
-          0,
-          0,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          0,
-          1,
-          0,
-          0,
-          0,
-          0
+          9
         ]
       ]
     }
   },
   "decision_distribution": {
-    "block": 200,
-    "allow": 264,
-    "confirm": 36
+    "block": 396,
+    "allow": 404,
+    "confirm": 84
   },
   "decision_class_weight": "none",
-  "category_training_rows": 500,
+  "category_training_rows": 396,
+  "category_training_scope": "block_examples_only",
   "category_classes": [
     "abuse",
     "data_exfiltration",
@@ -336,19 +280,19 @@
     "harmful_content",
     "indirect_injection",
     "jailbreak",
-    "none",
     "privilege_escalation",
     "prompt_injection",
-    "sensitive_action",
     "system_prompt_extraction",
     "system_prompt_override",
     "tool_abuse",
     "unauthorized_data_access"
   ],
-  "risk_level_training_rows": 236,
+  "risk_level_training_rows": 480,
   "risk_level_training_scope": "non_allow_examples_only",
-  "feature_schema": "v2.4_intent_normalized_role_tagged_context",
+  "feature_schema": "v2.5_full_user_history_normalized_role_tagged_context",
   "grouping_fields": [
+    "scenario_family",
+    "group_id",
     "user_prompt",
     "context.history.content",
     "context.attachments.content"

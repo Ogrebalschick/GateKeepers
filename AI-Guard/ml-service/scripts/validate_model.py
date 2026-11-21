@@ -10,6 +10,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 from scripts.train_model import load_rows, load_rows_many, make_vectorizer, make_classifier, make_groups
 from app.pipeline.engine import evaluate_request, _model_risk_level, _model_result
+from app.pipeline.layer0_rules import check_always_block, check_rbac
 from app.pipeline import layer1_classifier
 from app.pipeline.context_analyzer import prepare_analysis_context
 from app.utils.policy_loader import load_policy
@@ -105,6 +106,34 @@ def main():
     rows = eval_rows + aug_rows
     texts = eval_texts + aug_texts
     eval_count = len(eval_rows)
+    load_policy()
+
+    rules_only_decisions = []
+    rules_only_covered = []
+    for row in eval_rows:
+        context = row.get("context", {})
+        prepared = prepare_analysis_context(row["user_prompt"], context)
+        analysis_context = prepared["analysis_context"]
+        result = check_always_block(
+            row["user_prompt"],
+            attachments=analysis_context["attachments"],
+            history=analysis_context["history"],
+            normalized_text=prepared["prompt_for_analysis"],
+            user_role=str(context.get("user_role", "unknown")),
+            target_agent=str(context.get("target_agent") or "it_ops_agent"),
+        )
+        if result is None:
+            result = check_rbac(row["user_prompt"], analysis_context, prepared["prompt_for_analysis"])
+        if result is not None:
+            rules_only_decisions.append(result.decision)
+            rules_only_covered.append(True)
+        elif prepared["safe_analysis"]:
+            rules_only_decisions.append("allow")
+            rules_only_covered.append(True)
+        else:
+            rules_only_decisions.append("confirm")
+            rules_only_covered.append(False)
+
     targets = [row["expected_decision"] for row in rows]
     groups = make_groups(rows)
     split_count = min(max(2, args.folds), len(set(groups)))
@@ -132,8 +161,13 @@ def main():
         decision_model.fit(train_features, [rows[i]["expected_decision"] for i in train_idx])
         bundle["decisions"] = decision_model
 
+        category_train_idx = [i for i in train_idx if rows[i]["expected_decision"] == "block"]
+        category_train_positions = [list(train_idx).index(i) for i in category_train_idx]
         category_model = make_classifier("balanced", args.alpha)
-        category_model.fit(train_features, [rows[i]["risk_category"] for i in train_idx])
+        category_model.fit(
+            train_features[category_train_positions],
+            [rows[i]["risk_category"] for i in category_train_idx],
+        )
         bundle["categories"] = category_model
 
         risk_train_idx = [i for i in train_idx if rows[i]["expected_decision"] != "allow"]
@@ -229,13 +263,19 @@ def main():
 
     report = {
         "validation_mode": "grouped_out_of_fold",
-        "validation_version": "2.4.0",
+        "validation_version": "2.5.0",
         "folds": split_count,
         "seed": args.seed,
         "decision_class_weight": args.decision_class_weight,
         "examples": len(eval_rows),
         "training_augmented_rows": len(aug_rows),
         "augmentation_sources": [str(path) for path in augment_paths],
+        "rules_only": {
+            **decision_metrics(eval_rows, rules_only_decisions),
+            "rule_coverage": sum(rules_only_covered) / len(rules_only_covered) if rules_only_covered else 0.0,
+            "unhandled_examples": sum(not value for value in rules_only_covered),
+            "fallback_decision": "confirm",
+        },
         "full_pipeline": {
             **full_decision_report,
             "risk_category_accuracy_block_examples": float(
@@ -288,8 +328,8 @@ def main():
                 target_names=list(DECISIONS), output_dict=True, zero_division=0
             ),
         },
-        "feature_schema": "v2.4_intent_normalized_role_tagged_context",
-        "category_training_scope": "all_examples_with_threat_only_inference_for_block",
+        "feature_schema": "v2.5_full_user_history_normalized_role_tagged_context",
+        "category_training_scope": "block_examples_only",
         "risk_level_training_scope": "non_allow_examples_only",
     }
 

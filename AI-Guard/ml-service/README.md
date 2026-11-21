@@ -1,71 +1,51 @@
-# Astra Guard ML Service 2.4.0
+# Astra Guard ML Service 2.5.0
 
-Изолированный защитный сервис для кейса «ИИ-сторож» v2.0. Он проверяет пользовательскую инструкцию и доступный контекст до передачи запроса целевому ИИ-агенту. Сервис не исполняет shell-команды и не вызывает инфраструктурные инструменты.
+Локальный защитный сервис для кейса «ИИ-сторож» v2.0. Он проверяет `user_prompt`, доверенный контекст, историю и извлечённый текст вложений до передачи запроса целевому DevOps-агенту. Сервис только классифицирует запрос; shell-команды и инфраструктурные действия он не исполняет.
 
-## Состав
+## Что изменено в 2.5.0
 
-- **Layer 0:** детерминированные правила для prompt injection, jailbreak, indirect injection, system prompt extraction/override, privilege escalation, data exfiltration, harmful content, fraud/social engineering, abuse и RBAC.
-- **Normalizer:** NFKC, zero-width, Base64, обратный текст, разделённые символы, homoglyph, leetspeak и смешанные кириллическо-латинские варианты.
-- **Layer 1:** локальная модель scikit-learn с тремя классификационными головами: решение, категория угрозы и уровень риска. Используется общий word/character TF-IDF-векторизатор; текст векторизуется один раз на запрос.
-- **Context analysis:** отдельная обработка пользовательских сообщений истории и вложений. Цитируемые или анализируемые инструкции не считаются автоматически активными командами; действующие инструкции во вложениях остаются недоверенными.
-- **Layer 2:** необязательный локальный llama.cpp клиент, выключен по умолчанию. Внешние LLM API не используются.
-- **FastAPI:** `POST /v1/check`, `GET /health`, `POST /internal/reload-policy`.
-- **Startup warm-up:** загрузка и прогрев модели до начала приёма запросов.
-- **Input limits:** ограничения размера запроса, истории, вложений и суммарного контекста.
+- Исправлена потеря предыдущих пользовательских сообщений в `context.history`; история анализируется в рамках конкретного входящего запроса и не переносится между независимыми вызовами evaluator.
+- Расширено обнаружение косвенных инструкций во вложениях: `Assistant instruction`, `AI agent:`, `MODEL DIRECTIVE`, HTML-комментарии и другие варианты адресации к модели.
+- Уточнено различение `prompt_injection`, `system_prompt_override`, `system_prompt_extraction` и `privilege_escalation`.
+- Добавлены проверки вывода секретов на личную почту, безопасного просмотра только имён секретов, анализа отчётов об атаках и синтетических тестовых данных.
+- Совместимость с тремя примерами `feature-1423` вынесена в локальный YAML-раздел `compatibility`, а не оставлена в Python-коде.
+- Layer 1 переобучен на 500 официальных примерах и 384 синтетических примерах; общий объём — 884 строки.
+- Добавлены регрессионные тесты по найденным ошибкам. Backend и Frontend GateKeepers не изменялись.
 
-## Среда
+## Архитектура
 
-- Локальная разработка: Python **3.14**.
-- Dockerfile: Python **3.11-slim**, как в исходном контракте кейса.
-- Контрольные тесты этой сборки выполнены в среде Python 3.13.5 со зафиксированными версиями библиотек; локальный повторный прогон на твоём Python 3.14 обязателен. Docker build не выполнялся: Docker отсутствовал в среде сборки.
-- Зависимости зафиксированы в `requirements.txt`.
+- **Layer 0 — Rules Engine:** нормализация, детерминированное обнаружение однозначных атак, проверка вложений и истории, секретов, запретных действий и RBAC по YAML.
+- **Layer 1 — ML Classifier:** локальный `SGDClassifier(loss="log_loss")` с общим word/character TF-IDF и тремя головами: `decision`, `risk_category`, `risk_level`.
+- **Layer 2 — Local LLM:** необязательный клиент llama.cpp. По умолчанию выключен (`LLM_ENABLED=false`); внешние LLM API не используются.
+- **FastAPI:** `POST /v1/check`, `GET /health`, `POST /internal/reload-policy`, `GET /internal/policy-version`.
+- **Context analysis:** текущий запрос, пользовательские сообщения истории и вложения нормализуются до классификации. Инструкции во вложениях рассматриваются как недоверенные данные.
 
-### Windows PowerShell
+## Модель и данные
 
-```powershell
-py -3.14 -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-pytest -q
-uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
+Файл модели: `models/guard_model.joblib`.
 
-Проверка готовности: `http://127.0.0.1:8000/health`. Ожидается `version: 2.4.0`, `model_loaded: true`, `model_warmed_up: true`. Swagger: `http://127.0.0.1:8000/docs`.
+- Классификатор: `SGDClassifier(loss="log_loss")`.
+- Признаки: `FeatureUnion` из word TF-IDF (1–2 грамма) и char-wb TF-IDF (2–5 граммов).
+- Обучение: `astra_public_v2/dev.jsonl` (500) + `data/augmentation_v25.jsonl` (384).
+- Синтетические строки группируются по `scenario_family`; близкие тексты, история и вложения учитываются при grouped-разбиении.
+- Для классификации категории используются только примеры с эталонным `block`; для уровня риска — `block` и `confirm`.
+- `id`, `tags`, `difficulty`, `lang`, `expected_decision`, `risk_category`, `risk_level`, `is_dangerous` и другие поля разметки не являются признаками.
+- Подробности и конфигурация обучения находятся в `models/training_metadata.json`.
 
-### Linux / macOS
-
-```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-pytest -q
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-## Модель и признаки
-
-В поставляемом `models/guard_model.joblib` находятся три классификатора и общий TF-IDF-векторизатор. Модель обучена на 500 строках официального `astra_public_v2/dev.jsonl`; синтетическая аугментация в финальный bundle не включалась.
-
-Используются только доступные при реальной проверке поля:
-
-- текущий `user_prompt`;
-- доверенная роль `context.user_role`;
-- история пользовательских сообщений;
-- содержимое и метаданные вложений, доступные в контексте.
-
-Идентификаторы, `tags`, `difficulty`, `lang`, `expected_decision`, `risk_category`, `risk_level`, `is_dangerous` и прочие разметочные поля датасета не используются как признаки.
-
-Обучение воспроизводится командой:
+Повторное обучение:
 
 ```powershell
-python scripts/train_model.py --data astra_public_v2/dev.jsonl --output models/guard_model.joblib --decision-class-weight none --alpha 0.0001
+python scripts/train_model.py `
+  --data astra_public_v2/dev.jsonl `
+  --augment data/augmentation_v25.jsonl `
+  --output models/guard_model.joblib `
+  --decision-class-weight none `
+  --alpha 0.0001
 ```
 
-## Результаты контрольной проверки 2.4.0
+## Проверки 2.5.0
 
-Все отчёты находятся в `reports/`.
+Все приведённые ниже прогоны выполнены на фактической рабочей копии после переобучения модели.
 
 ### Официальный evaluator v2.0
 
@@ -77,124 +57,135 @@ python scripts/train_model.py --data astra_public_v2/dev.jsonl --output models/g
 | High/Critical strict block recall | 100% |
 | Risk-category accuracy | 100% |
 | Hard-negative block rate | 0% |
-| Invalid / timeout | 0 |
-| p95 latency | 17.09 ms |
+| Ошибки / таймауты | 0 |
+| p95 latency | 15.94 ms |
 
-`cpu_bonus_timing_and_quality_candidate` отмечен evaluator как `true`. Это только кандидат на CPU-бонус; окончательное решение принимают организаторы на своём оборудовании.
+Это проверка совместимости и регрессий на публичном наборе, который разрешено использовать при обучении и настройке. Она не доказывает качество на закрытых данных.
 
-### Контекстный regression suite
+### Challenge v26 dev
 
-Вручную составленный набор `tests/data/challenge_v24.jsonl` содержит 72 сценария: прямые атаки, безопасные запросы, RBAC, историю и вложения.
+91 специально составленный сценарий: атаки всех основных категорий, hard negatives, вложения, многошаговые запросы и RBAC.
 
 | Метрика | Результат |
 |---|---:|
-| Совпадение решения | 72 / 72 |
-| Совпадение категории | 72 / 72 |
-| Совпадение уровня риска | 72 / 72 |
-| Ошибочные allow | 0 |
-| Ложные block на allow | 0 |
-| Некорректные ответы | 0 |
-| p95 latency | 8.24 ms |
+| Совпадение решения и категории | 91 / 91 |
+| Strict High/Critical block recall | 100% |
+| Ложные блокировки hard negatives | 0% |
+| p95 latency | 7.92 ms |
 
-Это регрессионный набор, а не слепая независимая выборка: правила и тесты дорабатывались совместно. Он не заменяет закрытый набор организаторов.
+Этот набор использовался для разработки и исправления ошибок. Это регрессионный dev-набор, а не слепая независимая оценка.
 
-### Пятифолдовая grouped OOF-валидация
+### Независимый one-shot holdout v26
 
-Разбиение: `StratifiedGroupKFold`, 5 folds, seed 42, 500 публичных примеров. Похожие примеры группируются по запросу, истории и вложениям.
+После заморозки кода создан отдельный набор из 87 сценариев, не использовавшийся при обучении и настройке. Он прогнан один раз; отдельные ошибки не анализировались и параметры по нему не менялись.
 
-| Метрика | Полный каскад | Только ML Layer 1 |
-|---|---:|---:|
-| Accuracy | 99.8% | 89.4% |
-| Macro-F1 решений | 99.48% | 82.29% |
-| Balanced Cost Score | 0.9994 | 0.9455 |
-| High/Critical strict block recall | 100% | 88.55% |
-| Hard-negative block rate | 0% | 3% |
-| Risk category accuracy на block | 100% | 64% |
-| Risk level accuracy | 99.8% | 81.4% |
+| Метрика | Результат |
+|---|---:|
+| Примеры | 87 |
+| Balanced Cost Score | 91.62% |
+| Score | 91.62% (64.14 / 70) |
+| High/Critical strict block recall | 92.31% |
+| Containment recall | 100% |
+| Ложные блокировки hard negatives | 16.67% |
+| Лишние подтверждения среди allow | 6.67% |
+| Risk-category accuracy | 79.31% |
+| Ошибки / таймауты | 0 |
+| p95 latency | 6.65 ms |
 
-В полном каскаде Layer 0 обработал 290 из 500 примеров, Layer 1 — 210. Поскольку правила Layer 0 уточнялись с учётом публичного набора, полные OOF-метрики могут быть оптимистичными. `Model only` отделяет ML от Layer 0, но тоже основан на небольшом публичном наборе.
+Это более реалистичный индикатор обобщения, чем публичный evaluator и challenge dev. Результат показывает заметный разрыв: особенно нужно улучшать устойчивость к ложным блокировкам и классификацию категорий. Набор сохранён как контрольный holdout и не должен использоваться для подбора правил или порогов.
 
-**Главный критерий обобщения — закрытый набор организаторов.** Публичный evaluator подтверждает совместимость API и отсутствие регрессий на предоставленных примерах, но не доказывает качество на неизвестных атаках.
+### Grouped 5-fold OOF
 
-## Проверки
+`StratifiedGroupKFold`, 5 folds, seed 42. Оцениваются 500 публичных примеров; 384 синтетических примера доступны только как дополнительные обучающие строки.
+
+| Метрика | Rules-only | ML-only | Full pipeline |
+|---|---:|---:|---:|
+| Accuracy | 63.4% | 92.0% | 100% |
+| Macro-F1 решений | 59.40% | 86.77% | 100% |
+| Balanced Cost Score | 89.24% | 95.61% | 100% |
+| High/Critical strict block recall | 91.57% | 93.37% | 100% |
+| Hard-negative block rate | 0% | 5% | 0% |
+| Rule coverage | 62.6% | — | 62.6% Layer 0 |
+
+Дополнительные показатели:
+- ML-only risk-category accuracy на block-примерах — 77.5%; risk-level accuracy — 84.4%.
+- Full-pipeline risk-category accuracy — 99.0%; risk-level accuracy — 99.6%.
+- Layer 1 обрабатывает остаток после Layer 0; в OOF это 187 из 500 примеров.
+
+**Интерпретация:** Rules-only не является достаточным самостоятельным решением: нераспознанные запросы переходят в `confirm`, из-за чего возникает много лишних подтверждений. ML-only заметно лучше, но уступает полному каскаду. Full-pipeline OOF может быть оптимистичным: правила Layer 0 разрабатывались с использованием публичного набора. Поэтому главным независимым испытанием остаётся закрытая выборка организаторов.
 
 ### Автоматические тесты
 
+- Astra Guard: **184 passed**.
+- Официальные unit-тесты evaluator: **5 passed**.
+
+## Политика безопасности и известное расхождение
+
+Оригинальный `astra_public_v2/security_policy.yaml` сохранён без изменений. В нём `nonprod` включает `dev-*`, `stage-*`, `test-*`, но не `feature-*`. При этом три публичных примера с ресурсом `feature-1423` размечены как non-production и ожидают `confirm` для удаления.
+
+Чтобы не менять официальный файл и одновременно воспроизводить разметку публичного набора, в локальный `policy.yaml` добавлено явное расширение:
+
+```yaml
+compatibility:
+  nonprod_resource_patterns:
+    - "feature-*"
+```
+
+Это локальная совместимость, а не правило из оригинальной политики. Удаление этой записи отключает расширение без правки Python-кода. Для строгого соответствия только официальным префиксам удалите её и учитывайте, что три противоречивых публичных примера будут обрабатываться по статусу `unknown`.
+
+## API и граница доверия
+
+`POST /v1/check` принимает `user_prompt`, `context` и необязательный `session_id`. Ответ включает `decision`, `risk_level`, `risk_category`, `explanation`, `latency_ms`, `pipeline_layer`, `check_id`.
+
+- `allow` — можно передать запрос целевому агенту.
+- `confirm` — действие допустимо для роли, но до отдельного явного подтверждения не передаётся.
+- `block` — передача запрещена.
+
+**Backend должен формировать доверенный контекст сам.** `user_role` берётся из проверенной серверной сессии/JWT, а не из тела запроса браузера. Историю и вложения также должен собирать Backend. Подтверждение не расширяет полномочия и должно быть привязано к неизменному запросу и контексту. При ошибке или недоступности проверки запрос не передаётся целевому агенту.
+
+`/v1/check` не требует авторизации для совместимости с evaluator. Не публикуйте его напрямую в интернет; в интеграции его должен вызывать только Backend из доверенной сети.
+
+## Запуск на Windows
+
+Целевая локальная среда разработчика — Python 3.14. В этой сборочной среде фактически проверен Python 3.13.5; совместимость с Python 3.14 необходимо подтвердить локально.
+
 ```powershell
+py -3.14 -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 pytest -q
+python -m unittest discover -s astra_public_v2 -p "test_evaluate.py"
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Контрольный результат: **145 passed**.
-
-### Контекстный regression suite
-
-При работающем сервере:
-
-```powershell
-python scripts/run_adversarial_suite.py `
-  --endpoint http://127.0.0.1:8000/v1/check `
-  --data tests/data/challenge_v24.jsonl `
-  --report reports/challenge_v24.json `
-  --predictions reports/challenge_v24_predictions.jsonl
-```
-
-### Официальный evaluator
+В другом окне PowerShell:
 
 ```powershell
 python astra_public_v2/evaluate.py `
   --data astra_public_v2/dev.jsonl `
   --endpoint http://127.0.0.1:8000/v1/check `
-  --report reports/official_evaluator_v24.json `
-  --save-predictions reports/official_evaluator_v24_predictions.jsonl
+  --report reports/official_evaluator_v25.json `
+  --save-predictions reports/official_evaluator_v25_predictions.jsonl
 ```
 
-### Grouped OOF
+`http://127.0.0.1:8000/health` должен вернуть `version: 2.5.0`, `model_loaded: true`, `model_warmed_up: true`.
+
+## Docker
+
+Dockerfile использует `python:3.11-slim`, соответствующий стеку ML-сервиса из командных задач GateKeepers. Docker build в текущей среде не выполнялся, так как Docker CLI недоступен.
 
 ```powershell
-python scripts/validate_model.py `
-  --data astra_public_v2/dev.jsonl `
-  --report reports/grouped_validation_oof_v24.json `
-  --predictions reports/grouped_validation_oof_predictions_v24.jsonl
+docker build -t astra-guard:2.5.0 .
+docker run --rm -p 8000:8000 astra-guard:2.5.0
 ```
 
-## API и интеграция
+## Ограничения
 
-`POST /v1/check` сохраняет совместимость с официальным evaluator и не требует авторизации. Пример:
-
-```json
-{
-  "user_prompt": "Restart payments-api in production.",
-  "context": {
-    "target_agent": "it_ops_agent",
-    "user_role": "developer",
-    "user_id": "u-example",
-    "user_name": "Example User",
-    "system_prompt": "",
-    "history": [],
-    "attachments": []
-  }
-}
-```
-
-Ответ содержит `decision`, `risk_level`, `risk_category`, `explanation`, `latency_ms`, `pipeline_layer` и `check_id`.
-
-**Граница доверия:** в GateKeepers Frontend не должен вызывать этот маршрут напрямую. Backend должен проверять JWT, получать роль из доверенной серверной сессии, собирать историю из своей базы и передавать ML-service уже проверенный контекст. Не доверяйте `user_role`, `user_id` или истории, присланным браузером без серверной проверки.
-
-`POST /internal/reload-policy` принимает YAML-политику и версию. `policy.yaml` в этой сборке совпадает с официальной `security_policy.yaml` из набора кейса.
-
-### Backend logging
-
-`BACKEND_URL` пустой по умолчанию. Если Backend реализует `POST /internal/checks`, можно задать его внутренний URL в окружении. Недоступность Backend не должна влиять на решение `/v1/check`. До реализации маршрута оставляйте `BACKEND_URL` пустым.
-
-### Layer 2
-
-По умолчанию выключен (`LLM_ENABLED=false`). Если он будет включён, допускается только локальный llama.cpp endpoint. Его качество и задержку необходимо оценивать отдельно; основной Layer 0 + Layer 1 должен оставаться работоспособным без него.
-
-## Ограничения и безопасность
-
-- Сервис только классифицирует запросы; он не исполняет команды и не вызывает инструменты.
-- `confirm` не является разрешением на выполнение. Backend должен требовать отдельного явного подтверждения и повторно проверять неизменность запроса.
-- При `block`, ошибке проверки или недоступности ML-service запрос нельзя передавать целевому агенту.
-- `/v1/check` без авторизации предназначен для evaluator и внутренней сети. Не публикуйте его напрямую в интернет.
-- Внешние LLM API не используются.
-- Публичные и вручную составленные тесты не заменяют закрытую оценку организаторов.
+- Закрытый набор организаторов (около 3000 примеров) недоступен; его результаты неизвестны.
+- Публичный набор синтетический и малый. Synthetic augmentation расширяет обучение, но не заменяет независимые реальные данные.
+- Независимый one-shot holdout v26 показал BCS 91.62% и hard-negative block rate 16.67%; текущая версия — кандидат для дальнейшей разработки, а не доказанно устойчивая финальная система.
+- ML-only категории пока слабее решений: 77.5% category accuracy в grouped OOF. Полный каскад использует детерминированные правила для наиболее однозначных случаев.
+- Python 3.14 и Docker build не подтверждены в этой среде.
+- p95 измерен локально на последовательном HTTP-прогоне; итоговый замер и CPU-бонус подтверждают только организаторы на своём оборудовании.

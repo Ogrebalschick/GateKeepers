@@ -28,6 +28,12 @@ def _validate_policy(data: Any) -> dict[str, Any]:
         raise ValueError("agents must be a non-empty mapping")
     if not isinstance(data.get("decisions"), dict):
         raise ValueError("decisions must be a mapping")
+    compatibility = data.get("compatibility", {})
+    if not isinstance(compatibility, dict):
+        raise ValueError("compatibility must be a mapping")
+    nonprod_patterns = compatibility.get("nonprod_resource_patterns", [])
+    if not isinstance(nonprod_patterns, list) or not all(isinstance(x, str) and x.strip() for x in nonprod_patterns):
+        raise ValueError("compatibility.nonprod_resource_patterns must be a list of non-empty strings")
     for agent_name, agent in data["agents"].items():
         if not isinstance(agent, dict) or not isinstance(agent.get("roles"), dict):
             raise ValueError(f"agents.{agent_name}.roles must be a mapping")

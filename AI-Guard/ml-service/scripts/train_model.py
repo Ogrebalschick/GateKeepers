@@ -53,6 +53,15 @@ def make_groups(rows, threshold=0.85):
         if left_root != right_root:
             parent[right_root] = left_root
 
+    family_first = {}
+    for index, row in enumerate(rows):
+        family = row.get("scenario_family") or row.get("group_id")
+        if family:
+            if family in family_first:
+                union(index, family_first[family])
+            else:
+                family_first[family] = index
+
     fields = {"user_prompt": [], "history": [], "attachments": [], "attachment_content": [], "combined_context": []}
     for row in rows:
         context = row.get("context") or {}
@@ -132,8 +141,9 @@ def fit_bundle(rows, texts, decision_class_weight=None, alpha=1e-4):
     decision_model = make_classifier(decision_class_weight, alpha)
     decision_model.fit(features, decisions)
 
+    category_indices = [index for index, row in enumerate(rows) if row["expected_decision"] == "block"]
     category_model = make_classifier("balanced", alpha)
-    category_model.fit(features, categories)
+    category_model.fit(features[category_indices], [categories[index] for index in category_indices])
 
     risk_indices = [index for index, row in enumerate(rows) if row["expected_decision"] != "allow"]
     risk_model = make_classifier("balanced", alpha)
@@ -204,10 +214,18 @@ def main():
         print(f"\n{name}: macro_f1={report[name]['macro_f1']}")
         print(classification_report(y_true, y_pred, zero_division=0))
 
+    category_train_rows = [i for i in train_idx if rows[i]["expected_decision"] == "block"]
+    category_test_rows = [i for i in test_idx if rows[i]["expected_decision"] == "block"]
+    category_train_positions = [list(train_idx).index(i) for i in category_train_rows]
+    category_test_positions = [list(test_idx).index(i) for i in category_test_rows]
     category_model = make_classifier("balanced", args.alpha)
-    category_model.fit(train_features, [rows[i]["risk_category"] for i in train_idx])
-    y_true = [rows[i]["risk_category"] for i in test_idx]
-    y_pred = category_model.predict(test_features)
+    category_model.fit(
+        train_features[category_train_positions],
+        [rows[i]["risk_category"] for i in category_train_rows],
+    )
+    category_test_features = test_features[category_test_positions]
+    y_true = [rows[i]["risk_category"] for i in category_test_rows]
+    y_pred = category_model.predict(category_test_features)
     report["categories"] = {
         "macro_f1": round(float(f1_score(y_true, y_pred, average="macro", zero_division=0)), 4),
         "accuracy": round(sum(a == b for a, b in zip(y_true, y_pred)) / len(y_true), 4) if y_true else 0.0,
@@ -220,7 +238,7 @@ def main():
 
     bundle = fit_bundle(rows, texts, decision_class_weight, args.alpha)
     bundle["metadata"] = {
-        "model_version": "2.4.0",
+        "model_version": "2.5.0",
         "classifier": "SGDClassifier(loss=log_loss)",
         "vectorizer": "FeatureUnion(TfidfVectorizer word 1-2, char_wb 2-5)",
         "training_rows": len(rows),
@@ -234,12 +252,13 @@ def main():
         "validation": report,
         "decision_distribution": dict(Counter(targets)),
         "decision_class_weight": args.decision_class_weight,
-        "category_training_rows": len(rows),
-        "category_classes": sorted(set(row["risk_category"] for row in rows)),
+        "category_training_rows": sum(row["expected_decision"] == "block" for row in rows),
+        "category_training_scope": "block_examples_only",
+        "category_classes": sorted(set(row["risk_category"] for row in rows if row["expected_decision"] == "block")),
         "risk_level_training_rows": sum(row["expected_decision"] != "allow" for row in rows),
         "risk_level_training_scope": "non_allow_examples_only",
-        "feature_schema": "v2.4_intent_normalized_role_tagged_context",
-        "grouping_fields": ["user_prompt", "context.history.content", "context.attachments.content"],
+        "feature_schema": "v2.5_full_user_history_normalized_role_tagged_context",
+        "grouping_fields": ["scenario_family", "group_id", "user_prompt", "context.history.content", "context.attachments.content"],
     }
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

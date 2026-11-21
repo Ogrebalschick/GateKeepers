@@ -1,21 +1,33 @@
-# Astra Guard 2.4.0 — release notes
+# Astra Guard 2.5.0 — release notes
 
-Финальная согласованная сборка ML-компонента. Предыдущие версии сохранены отдельно.
+## Состав релиза
 
-## Проверки финальной копии
+Обновлённый ML-service с исправленным анализом истории, расширенным обнаружением indirect injection, более точной обработкой system prompt override / privilege escalation, безопасным режимом просмотра имён секретов и YAML-driven совместимостью с публичными примерами `feature-*`.
 
-- Pytest: 145 passed.
-- Официальный evaluator v2.0: 500 валидных ответов, 70/70 автоматических баллов, Score 1.000, 0 invalid/timeout, p95 17.09 ms.
-- Контекстный regression suite: 72/72 по решению, категории и уровню риска; 0 false allow, 0 false block, 0 invalid; p95 8.24 ms.
-- Grouped 5-fold OOF: полный каскад accuracy 99.8%, macro-F1 99.48%, Balanced Cost Score 0.9994, strict high/critical block recall 100%.
-- ML-only OOF: accuracy 89.4%, macro-F1 82.29%, strict high/critical block recall 88.55%.
-- Официальная security policy в `policy.yaml` совпадает с `astra_public_v2/security_policy.yaml`.
-- Финальный model bundle и training metadata имеют версию 2.4.0; обучение: 500 публичных строк, 0 строк аугментации.
+## Подтверждённые проверки
 
-## Ограничения оценки
+- 184 unit/API/regression tests passed.
+- Официальные тесты evaluator: 5 passed.
+- Official evaluator v2.0: 500 ответов, 70/70 автоматических баллов, Score 1.000, 0 ошибок/таймаутов, p95 15.94 ms.
+- Challenge v26 dev: 91/91 по решению и категории, p95 7.92 ms. Набор использовался при разработке, не является слепой оценкой.
+- Grouped 5-fold OOF: full pipeline accuracy 100%, macro-F1 100%, BCS 1.000; ML-only accuracy 92.0%, macro-F1 86.77%, BCS 95.61%, strict High/Critical block recall 93.37%, category accuracy 77.5%.
+- Модель обучена на 500 официальных и 384 синтетических строках. Оригинальные `dev.jsonl`, `dev.csv`, `security_policy.yaml`, `evaluate.py` и `test_evaluate.py` не изменены.
 
-Публичный evaluator проверяет набор, на котором обучалась модель. Challenge suite — ручной регрессионный набор, не слепой тест. Full-pipeline OOF может быть оптимистичным, поскольку Layer 0 rules уточнялись по публичным примерам. Закрытый набор организаторов остаётся главным независимым критерием.
+## Независимый one-shot holdout
 
-## Среда сборки
+Отдельный набор из 87 сценариев, созданный после заморозки кода и не использованный для обучения/настройки:
 
-Проверки выполнены в контейнерной среде Python 3.13.5, scikit-learn 1.8.0, FastAPI 0.128.2. Целевая локальная среда разработчика — Python 3.14. Docker build не запускался, поскольку Docker недоступен в среде сборки.
+- Balanced Cost Score: 0.9162 (64.14/70).
+- High/Critical strict block recall: 92.31%; containment recall: 100%.
+- Hard-negative block rate: 16.67%; unnecessary confirmation rate: 6.67%.
+- Risk-category accuracy: 79.31%; p95: 6.65 ms; 0 invalid/timeout.
+
+Это выявило разрыв обобщения. Набор не использовался для исправления ошибок и должен оставаться контрольным holdout.
+
+## Важные оговорки
+
+Публичный evaluator и challenge dev-набор не являются независимыми blind holdout-оценками. Full-pipeline OOF может быть оптимистичным, так как правила Layer 0 дорабатывались с учётом публичных данных. Качество на закрытом наборе организаторов неизвестно.
+
+Сборка является release candidate, а не окончательно подтверждённым релизом. Она проверена на Python 3.13.5. Python 3.14 и Docker build в этой среде не проверены. CPU-only timing отмечен evaluator как кандидат на бонус; аппаратную конфигурацию и бонус подтверждают организаторы.
+
+В локальном `policy.yaml` есть явно обозначенное расширение `compatibility.nonprod_resource_patterns: ["feature-*"]` для трёх публичных примеров. Оригинальная официальная YAML-политика сохранена без изменений.
