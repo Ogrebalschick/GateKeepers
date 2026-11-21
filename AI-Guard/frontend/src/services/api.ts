@@ -566,138 +566,22 @@ function touchSession(
 
 // ─── GET /api/logs ────────────────────────────────────────────────────────────
 
-/**
- * Real: return apiClient.get<LogsResponse>('/api/logs', { params }).then(r => r.data);
- */
-function filterMockLogs(params?: LogsParams): LogItem[] {
-  const role = localStorage.getItem('guard_role');
-  const userId = localStorage.getItem('guard_user_id');
-
-  let items = [...MOCK_LOGS];
-  if (role === 'developer') items = items.filter((l) => l.user_id === userId);
-
-  if (params?.decision) items = items.filter((l) => l.decision === params.decision);
-  if (params?.risk_level) items = items.filter((l) => l.risk_level === params.risk_level);
-  if (params?.risk_category) items = items.filter((l) => l.risk_category === params.risk_category);
-  if (params?.user_id) items = items.filter((l) => l.user_id === params.user_id);
-  if (params?.search) {
-    const q = params.search.toLowerCase();
-    items = items.filter((l) => l.user_prompt.toLowerCase().includes(q));
-  }
-  if (params?.date_from) {
-    const from = new Date(params.date_from);
-    items = items.filter((l) => new Date(l.created_at) >= from);
-  }
-  if (params?.date_to) {
-    const to = new Date(params.date_to);
-    to.setHours(23, 59, 59, 999);
-    items = items.filter((l) => new Date(l.created_at) <= to);
-  }
-
-  return items;
-}
-
 export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
-  requireAuth();
-
-  const items = filterMockLogs(params);
-  const page = params?.page ?? 1;
-  const perPage = params?.per_page ?? 50;
-  const total = items.length;
-  const pages = Math.max(1, Math.ceil(total / perPage));
-  const start = (page - 1) * perPage;
-
-  return mockDelay(300, {
-    items: items.slice(start, start + perPage),
-    total,
-    page,
-    per_page: perPage,
-    pages,
-  });
+  return apiClient.get<LogsResponse>('/api/logs', { params }).then((r) => r.data);
 }
 
 // ─── GET /api/logs/{id} ───────────────────────────────────────────────────────
 
-/**
- * Real: return apiClient.get<LogDetail>(`/api/logs/${id}`).then(r => r.data);
- */
 export async function getLogById(id: number): Promise<LogDetail> {
-  requireAuth();
-
-  const item = MOCK_LOGS.find((l) => l.id === id);
-  if (!item) {
-    return Promise.reject(
-      Object.assign(new Error('not_found'), {
-        response: { status: 404, data: { error: 'not_found' } },
-      }),
-    );
-  }
-
-  const detail: LogDetail = {
-    id: item.id,
-    check_id: item.check_id,
-    created_at: item.created_at,
-    user_prompt: item.user_prompt,
-    context: {
-      target_agent: 'it_ops_agent',
-      user_role: item.user_role,
-      user_id: item.user_id,
-      user_name: item.user_name,
-      history_count: 0,
-      attachments_count: 0,
-      attachments: [],
-    },
-    decision: item.decision,
-    risk_level: item.risk_level,
-    risk_category: item.risk_category,
-    explanation: item.explanation,
-    latency_ms: item.latency_ms,
-    pipeline_layer: item.pipeline_layer,
-    policy_version: item.policy_version,
-    session_id: item.session_id,
-    confirm_status: item.confirm_status,
-  };
-
-  return mockDelay(300, detail);
+  return apiClient.get<LogDetail>(`/api/logs/${id}`).then((r) => r.data);
 }
 
 // ─── GET /api/logs/export.csv ─────────────────────────────────────────────────
 
-/**
- * Returns a CSV blob for the current filters. The page starts the download.
- * Real: window.open(`/api/logs/export.csv?${new URLSearchParams(params as Record<string,string>).toString()}`)
- */
 export async function exportLogs(params?: Omit<LogsParams, 'page' | 'per_page'>): Promise<Blob> {
-  requireAuth();
-  const headers = [
-    'id',
-    'check_id',
-    'created_at',
-    'user_name',
-    'user_role',
-    'decision',
-    'risk_level',
-    'risk_category',
-    'confirm_status',
-    'latency_ms',
-    'user_prompt',
-  ].join(',');
-  const rows = filterMockLogs(params).map((l) =>
-    [
-      l.id,
-      l.check_id,
-      l.created_at,
-      l.user_name,
-      l.user_role,
-      l.decision,
-      l.risk_level,
-      l.risk_category,
-      l.confirm_status ?? '',
-      l.latency_ms,
-      `"${l.user_prompt.replace(/"/g, '""')}"`,
-    ].join(','),
-  );
-  return new Blob([[headers, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+  return apiClient
+    .get<Blob>('/api/logs/export.csv', { params, responseType: 'blob' })
+    .then((r) => r.data);
 }
 
 // ─── GET /api/policy ──────────────────────────────────────────────────────────
