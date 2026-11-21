@@ -1,16 +1,48 @@
-import { GraduationCap, Loader2, Shield } from 'lucide-react';
+import { ArrowRight, GraduationCap, Loader2, Shield } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { login } from '../services/api';
+
+const DEMO_ACCOUNTS = [
+  {
+    username: 'admin',
+    password: 'demo_admin_2026',
+    role: 'admin',
+    access: 'полный доступ',
+    accessClass: 'text-blue-600',
+  },
+  {
+    username: 'sre_user',
+    password: 'demo_sre_2026',
+    role: 'SRE',
+    access: 'просмотр',
+    accessClass: 'text-green-600',
+  },
+  {
+    username: 'dev_user',
+    password: 'demo_dev_2026',
+    role: 'developer',
+    access: 'свои данные',
+    accessClass: 'text-orange-600',
+  },
+] as const;
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { isAuthenticated } = useCurrentUser();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  function fillDemo(account: (typeof DEMO_ACCOUNTS)[number]) {
+    setUsername(account.username);
+    setPassword(account.password);
+    toast.success(`Данные аккаунта ${account.role} подставлены`);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -115,38 +147,54 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {!isAuthenticated && (
+            <div className="mt-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-xs text-gray-400">или</span>
+                <div className="h-px flex-1 bg-gray-200" />
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-sm text-gray-600
+                           hover:border-gray-400 hover:bg-gray-50 transition cursor-pointer"
+              >
+                Продолжить как гость
+              </button>
+            </div>
+          )}
+
           {/* Demo credentials hint */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600">
             <p className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
               <GraduationCap className="w-4 h-4" />
               Demo credentials (для жюри)
             </p>
-            <table className="w-full">
-              <thead>
-                <tr className="text-gray-500">
-                  <th className="text-left font-medium pb-1">Логин</th>
-                  <th className="text-left font-medium pb-1">Пароль</th>
-                  <th className="text-left font-medium pb-1">Роль</th>
-                </tr>
-              </thead>
-              <tbody className="font-mono space-y-1">
-                <tr>
-                  <td className="pr-3 py-0.5">admin</td>
-                  <td className="pr-3">demo_admin_2026</td>
-                  <td className="text-blue-600">полный доступ</td>
-                </tr>
-                <tr>
-                  <td className="pr-3 py-0.5">sre_user</td>
-                  <td className="pr-3">demo_sre_2026</td>
-                  <td className="text-green-600">просмотр</td>
-                </tr>
-                <tr>
-                  <td className="pr-3 py-0.5">dev_user</td>
-                  <td className="pr-3">demo_dev_2026</td>
-                  <td className="text-orange-600">свои данные</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto_1rem] gap-x-3 px-2 pb-1 text-gray-500 font-medium">
+              <span>Логин</span>
+              <span>Пароль</span>
+              <span>Роль</span>
+              <span />
+            </div>
+            <div className="space-y-1">
+              {DEMO_ACCOUNTS.map((account) => (
+                <button
+                  key={account.username}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => fillDemo(account)}
+                  className="w-full grid grid-cols-[5.5rem_minmax(0,1fr)_auto_1rem] gap-x-3 items-center
+                             text-left px-2 py-1.5 rounded-md font-mono cursor-pointer
+                             hover:bg-white transition disabled:cursor-not-allowed"
+                >
+                  <span className="text-gray-800">{account.username}</span>
+                  <span className="text-gray-800">{account.password}</span>
+                  <span className={`font-sans ${account.accessClass}`}>{account.access}</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
