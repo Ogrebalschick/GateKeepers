@@ -10,16 +10,17 @@ interface Props {
   onClose: () => void;
 }
 
-const CONFIRM_STATUS: Record<string, { label: string; className: string }> = {
+const CONFIRM_STATUS = {
   pending: { label: 'Ожидает', className: 'bg-yellow-100 text-yellow-800' },
   approved: { label: 'Подтверждено', className: 'bg-green-100 text-green-800' },
   rejected: { label: 'Отклонено', className: 'bg-red-100 text-red-800' },
-  none: { label: 'Не требуется', className: 'bg-gray-100 text-gray-600' },
-};
+} as const;
 
 function confirmationKey(detail: LogDetail): keyof typeof CONFIRM_STATUS {
-  if (detail.confirm_status) return detail.confirm_status;
-  return detail.decision === 'confirm' ? 'pending' : 'none';
+  if (detail.confirm_status === 'approved' || detail.confirm_status === 'rejected') {
+    return detail.confirm_status;
+  }
+  return 'pending';
 }
 
 export default function LogDetailDrawer({ open, loading, detail, onClose }: Props) {

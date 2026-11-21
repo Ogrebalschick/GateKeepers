@@ -159,6 +159,7 @@ const MOCK_LOGS: LogItem[] = [
     has_attachments: false,
     session_id: null,
     policy_version: 1,
+    confirm_status: 'pending',
   },
   {
     id: 2,
@@ -197,6 +198,7 @@ const MOCK_LOGS: LogItem[] = [
     has_attachments: false,
     session_id: null,
     policy_version: 1,
+    confirm_status: 'pending',
   },
   {
     id: 4,
@@ -215,6 +217,7 @@ const MOCK_LOGS: LogItem[] = [
     has_attachments: false,
     session_id: null,
     policy_version: 1,
+    confirm_status: 'pending',
   },
   {
     id: 5,
@@ -233,6 +236,7 @@ const MOCK_LOGS: LogItem[] = [
     has_attachments: false,
     session_id: 'sess-002',
     policy_version: 1,
+    confirm_status: 'pending',
   },
   {
     id: 6,
@@ -251,6 +255,7 @@ const MOCK_LOGS: LogItem[] = [
     has_attachments: false,
     session_id: null,
     policy_version: 1,
+    confirm_status: 'pending',
   },
   {
     id: 7,
@@ -485,7 +490,7 @@ function recordSessionCheck(payload: CheckRequest, response: CheckResponse): voi
     has_attachments: payload.context.attachments.length > 0,
     session_id: sessionId,
     policy_version: 1,
-    confirm_status: response.decision === 'confirm' ? 'pending' : undefined,
+    confirm_status: 'pending',
   });
 
   if (response.is_multi_step_attack) MULTI_STEP_CHECKS.add(response.check_id);
