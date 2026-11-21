@@ -391,12 +391,19 @@ export async function login(username: string, password: string): Promise<LoginRe
  * Real: return mlClient.post<CheckResponse>('/check', payload).then(r => r.data);
  */
 export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse> {
-  const suspicious =
-    /ignore|jailbreak|DAN|act as|forget your instructions|system prompt/i.test(
+  // No requireAuth() — this endpoint is public by design
+
+  const isBlocked =
+    /ignore|jailbreak|DAN|act as|forget your instructions|system prompt|write malware|hack/i.test(
       payload.user_prompt,
     );
 
-  const response: CheckResponse = suspicious
+  const needsConfirm =
+    /restart|reboot|shutdown|scale down|delete.*prod|drop.*table|rm -rf/i.test(
+      payload.user_prompt,
+    );
+
+  const response: CheckResponse = isBlocked
     ? {
         check_id: crypto.randomUUID(),
         decision: 'block',
@@ -404,6 +411,16 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
         risk_category: 'jailbreak',
         explanation: 'Prompt attempts to override AI safety constraints.',
         latency_ms: 8.5,
+        pipeline_layer: 'layer0',
+      }
+    : needsConfirm
+    ? {
+        check_id: crypto.randomUUID(),
+        decision: 'confirm',
+        risk_level: 'medium',
+        risk_category: 'sensitive_action',
+        explanation: 'Action targets a production system and requires explicit confirmation per policy.',
+        latency_ms: 11.2,
         pipeline_layer: 'layer0',
       }
     : {
