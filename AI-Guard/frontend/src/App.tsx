@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import CheckPage from './pages/CheckPage';
 import DashboardPage from './pages/DashboardPage';
@@ -11,63 +12,73 @@ import PolicyPage from './pages/PolicyPage';
 import SessionDetailPage from './pages/SessionDetailPage';
 import SessionsPage from './pages/SessionsPage';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          {/* Login — без Layout */}
-          <Route path="/login" element={<LoginPage />} />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            {/* Login — без Layout */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Все страницы — внутри Layout */}
-          <Route element={<Layout />}>
-            <Route path="/" element={<CheckPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/logs"
-              element={
-                <ProtectedRoute>
-                  <LogsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/policy"
-              element={
-                <ProtectedRoute>
-                  <PolicyPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sessions"
-              element={
-                <ProtectedRoute>
-                  <SessionsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/sessions/:sessionId"
-              element={
-                <ProtectedRoute>
-                  <SessionDetailPage />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-      <Toaster position="top-right" />
-    </QueryClientProvider>
+            {/* Все страницы — внутри Layout */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<CheckPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/logs"
+                element={
+                  <ProtectedRoute>
+                    <LogsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/policy"
+                element={
+                  <ProtectedRoute>
+                    <PolicyPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sessions"
+                element={
+                  <ProtectedRoute>
+                    <SessionsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sessions/:sessionId"
+                element={
+                  <ProtectedRoute>
+                    <SessionDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+        <Toaster position="top-right" />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
