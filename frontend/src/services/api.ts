@@ -1,9 +1,12 @@
 /**
  * src/services/api.ts
  *
- * Two Axios instances:
- *   apiClient  — baseURL /api   — requires Bearer JWT (all /api/* endpoints)
- *   mlClient   — baseURL /v1    — no auth (POST /v1/check, evaluate.py compatible)
+ * Two Axios instances, both with an empty baseURL.
+ * Nginx inside the frontend container routes by path:
+ *   /api/* and /auth/* → backend
+ *   /v1/*              → ml-service
+ *   apiClient carries Bearer only for /api/*
+ *   mlClient (POST /v1/check) stays unauthenticated for evaluate.py
  *
  * To switch from mocks to real backend:
  *   Search for "// Real:" comments and replace the mock call with the real one.
@@ -61,23 +64,26 @@ function clearSession(): void {
 // Axios instances
 // =============================================================================
 
-// ─── apiClient — /api/* (Bearer JWT required) ─────────────────────────────────
+// ─── apiClient — /api/* and /auth/* (Bearer only on /api/) ───────────────────
 
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: '',
   headers: { 'Content-Type': 'application/json' },
 });
 
 apiClient.interceptors.request.use((config) => {
+  const url = config.url ?? '';
   const token = localStorage.getItem('guard_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token && url.includes('/api/')) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
 // ─── mlClient — /v1/* (no auth — evaluate.py compatible) ─────────────────────
 
 const mlClient = axios.create({
-  baseURL: '/v1',
+  baseURL: '',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -384,7 +390,7 @@ export async function login(username: string, password: string): Promise<LoginRe
 
 /**
  * ⚠️ No auth — evaluate.py calls this without a token.
- * Real: return mlClient.post<CheckResponse>('/check', payload).then(r => r.data);
+ * Real: return mlClient.post<CheckResponse>('/v1/check', payload).then(r => r.data);
  */
 export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse> {
   // No requireAuth() — this endpoint is public by design
@@ -435,7 +441,7 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
 // ─── GET /api/logs ────────────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<LogsResponse>('/logs', { params }).then(r => r.data);
+ * Real: return apiClient.get<LogsResponse>('/api/logs', { params }).then(r => r.data);
  */
 export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
   requireAuth();
@@ -473,7 +479,7 @@ export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
 // ─── GET /api/logs/{id} ───────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<LogDetail>(`/logs/${id}`).then(r => r.data);
+ * Real: return apiClient.get<LogDetail>(`/api/logs/${id}`).then(r => r.data);
  */
 export async function getLogById(id: number): Promise<LogDetail> {
   requireAuth();
@@ -563,7 +569,7 @@ export function exportLogs(params?: Omit<LogsParams, 'page' | 'per_page'>): void
 // ─── GET /api/policy ──────────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<PolicyVersion>('/policy').then(r => r.data);
+ * Real: return apiClient.get<PolicyVersion>('/api/policy').then(r => r.data);
  */
 export async function getPolicy(): Promise<PolicyVersion> {
   requireAuth();
@@ -573,7 +579,7 @@ export async function getPolicy(): Promise<PolicyVersion> {
 // ─── PUT /api/policy ──────────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.put<PolicyUpdateResponse>('/policy', data).then(r => r.data);
+ * Real: return apiClient.put<PolicyUpdateResponse>('/api/policy', data).then(r => r.data);
  */
 export async function updatePolicy(data: PolicyUpdateRequest): Promise<PolicyUpdateResponse> {
   requireAuth();
@@ -597,7 +603,7 @@ export async function updatePolicy(data: PolicyUpdateRequest): Promise<PolicyUpd
 // ─── GET /api/policy/history ──────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<PolicyHistoryResponse>('/policy/history').then(r => r.data);
+ * Real: return apiClient.get<PolicyHistoryResponse>('/api/policy/history').then(r => r.data);
  */
 export async function getPolicyHistory(): Promise<PolicyHistoryResponse> {
   requireAuth();
@@ -628,7 +634,7 @@ export async function getPolicyHistory(): Promise<PolicyHistoryResponse> {
 // ─── POST /api/confirm ────────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.post<ConfirmResponse>('/confirm', data).then(r => r.data);
+ * Real: return apiClient.post<ConfirmResponse>('/api/confirm', data).then(r => r.data);
  */
 export async function confirmAction(data: ConfirmRequest): Promise<ConfirmResponse> {
   requireAuth();
@@ -644,7 +650,7 @@ export async function confirmAction(data: ConfirmRequest): Promise<ConfirmRespon
 // ─── POST /api/sessions ───────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.post<Session>('/sessions', data).then(r => r.data);
+ * Real: return apiClient.post<Session>('/api/sessions', data).then(r => r.data);
  */
 export async function createSession(data: SessionCreateRequest): Promise<Session> {
   requireAuth();
@@ -668,7 +674,7 @@ export async function createSession(data: SessionCreateRequest): Promise<Session
 // ─── GET /api/sessions ────────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<SessionsResponse>('/sessions', { params }).then(r => r.data);
+ * Real: return apiClient.get<SessionsResponse>('/api/sessions', { params }).then(r => r.data);
  */
 export async function getSessions(params?: SessionsParams): Promise<SessionsResponse> {
   requireAuth();
@@ -697,7 +703,7 @@ export async function getSessions(params?: SessionsParams): Promise<SessionsResp
 // ─── GET /api/sessions/{id} ───────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<SessionDetail>(`/sessions/${id}`).then(r => r.data);
+ * Real: return apiClient.get<SessionDetail>(`/api/sessions/${id}`).then(r => r.data);
  */
 export async function getSessionById(id: string): Promise<SessionDetail> {
   requireAuth();
@@ -730,7 +736,7 @@ export async function getSessionById(id: string): Promise<SessionDetail> {
 // ─── GET /api/stats ───────────────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<StatsResponse>('/stats').then(r => r.data);
+ * Real: return apiClient.get<StatsResponse>('/api/stats').then(r => r.data);
  */
 export async function getStats(): Promise<StatsResponse> {
   requireAuth();
@@ -757,7 +763,7 @@ export async function getStats(): Promise<StatsResponse> {
 // ─── GET /api/stats/timeline ──────────────────────────────────────────────────
 
 /**
- * Real: return apiClient.get<TimelineResponse>('/stats/timeline', { params: { hours } }).then(r => r.data);
+ * Real: return apiClient.get<TimelineResponse>('/api/stats/timeline', { params: { hours } }).then(r => r.data);
  */
 export async function getTimeline(hours = 24): Promise<TimelineResponse> {
   requireAuth();
