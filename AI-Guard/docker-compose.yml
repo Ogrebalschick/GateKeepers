@@ -5,47 +5,49 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend:/app
+    # volumes:
+    #   - ./backend:/app     # ← ТОЛЬКО для разработки (hot-reload)
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=mariadb+pymysql://${DB_USER}:${DB_PASSWORD}@database:3306/${DB_NAME}
     depends_on:
-      - database
-    networks:
-      - app-network
+      database:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-    environment:
-      - REACT_APP_API_URL=http://backend:8000
+      - "80:80"
     depends_on:
-      - backend
-    networks:
-      - app-network
+      backend:
+        condition: service_started
+    restart: unless-stopped
 
-  model:
+  ml-service:
     build:
-      context: ./model
+      context: ./ml-service
       dockerfile: Dockerfile
-    volumes:
-      - ./model/model.gguf:/app/model.gguf
-      - /lingames/llama.cpp:/app/llama.cpp
-    environment:
-      - MODEL_PATH=/app/model.gguf
-      - LLAMA_CPP_PATH=/app/llama.cpp
-    networks:
-      - app-network
+    # ⚠️ эти два монтирования требуют реальных файлов на хосте:
+    # volumes:
+      # - ./model/model.gguf:/app/model.gguf:ro
+      # - ./model/llama.cpp:/app/llama.cpp:ro
+    # environment:
+      # - MODEL_PATH=/app/model.gguf
+      # - LLAMA_CPP_PATH=/app/llama.cpp
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
 
   database:
     image: mariadb:11.4
@@ -53,16 +55,15 @@ services:
     restart: unless-stopped
     ports:
       - "3306:3306"
+    env_file:
+      - .env
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-changeme}
-      - MYSQL_DATABASE=${DB_NAME:-mydb}
-      - MYSQL_USER=${DB_USER:-backend}
-      - MYSQL_PASSWORD=${DB_PASSWORD:-changeme}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
     volumes:
       - mariadb_data:/var/lib/mysql
-      # - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 30s

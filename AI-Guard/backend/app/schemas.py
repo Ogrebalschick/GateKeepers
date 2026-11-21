@@ -12,7 +12,6 @@ RiskCategory = Literal[
     "data_exfiltration", "harmful_content", "fraud_social_engineering", "abuse",
 ]
 
-
 class HistoryTurn(BaseModel):
     role: Literal["user", "assistant"]
     content: str = ""
@@ -74,3 +73,8 @@ class PolicyUpdateRequest(BaseModel):
     content_yaml: str
     comment: Optional[str] = None
     updated_by: str = "system"
+
+
+DECISIONS = frozenset(Decision)
+RISK_LEVELS = frozenset(RiskLevel)
+RISK_CATEGORIES = frozenset(RiskCategory)

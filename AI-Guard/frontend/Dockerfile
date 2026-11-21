@@ -1,13 +1,18 @@
-# ── Stage 1: сборка React-приложения ──────────────────────────────────────────
+# Stage 1
 FROM node:20-alpine AS build
 WORKDIR /app
+
 COPY package*.json ./
-COPY .npmrc ./
+# Опционально: если .npmrc нет — создаём пустой, чтобы COPY не упал
+RUN touch .npmrc
+COPY .npmrc* ./
+
 RUN npm ci
+
 COPY . .
 RUN npm run build
 
-# ── Stage 2: Nginx раздаёт статику и проксирует API ───────────────────────────
+# Stage 2
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
