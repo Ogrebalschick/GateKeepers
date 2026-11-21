@@ -25,6 +25,7 @@ import type {
   LogItem,
   LogsParams,
   LogsResponse,
+  PolicyHistoryItem,
   PolicyHistoryResponse,
   PolicyUpdateRequest,
   PolicyUpdateResponse,
@@ -320,6 +321,16 @@ const MOCK_POLICY: PolicyVersion = {
   comment: 'Initial policy version',
 };
 
+const MOCK_POLICY_HISTORY: PolicyHistoryItem[] = [
+  {
+    version: 1,
+    updated_at: '2026-11-20T18:00:00Z',
+    updated_by: 'admin',
+    comment: 'Initial policy version',
+    is_active: true,
+  },
+];
+
 // ─── Mock sessions ────────────────────────────────────────────────────────────
 
 const MOCK_SESSIONS: Session[] = [
@@ -361,6 +372,8 @@ const MOCK_SESSIONS: Session[] = [
 const MOCK_LOGS_KEY = 'guard_mock_logs';
 const MOCK_SESSIONS_KEY = 'guard_mock_sessions';
 const MOCK_MULTI_STEP_KEY = 'guard_mock_multi_step';
+const MOCK_POLICY_KEY = 'guard_mock_policy';
+const MOCK_POLICY_HISTORY_KEY = 'guard_mock_policy_history';
 
 function readStored<T>(key: string): T | null {
   if (typeof localStorage === 'undefined') return null;
@@ -390,7 +403,27 @@ function hydrateMocks(): void {
   if (!logs || !sessions) persistMocks();
 }
 
+function persistPolicy(): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(MOCK_POLICY_KEY, JSON.stringify(MOCK_POLICY));
+}
+
+function persistPolicyHistory(): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(MOCK_POLICY_HISTORY_KEY, JSON.stringify(MOCK_POLICY_HISTORY));
+}
+
+function hydratePolicy(): void {
+  const policy = readStored<PolicyVersion>(MOCK_POLICY_KEY);
+  const history = readStored<PolicyHistoryItem[]>(MOCK_POLICY_HISTORY_KEY);
+  if (policy) Object.assign(MOCK_POLICY, policy);
+  if (history) MOCK_POLICY_HISTORY.splice(0, MOCK_POLICY_HISTORY.length, ...history);
+  if (!policy) persistPolicy();
+  if (!history) persistPolicyHistory();
+}
+
 hydrateMocks();
+hydratePolicy();
 
 // =============================================================================
 // API functions
@@ -725,11 +758,23 @@ export async function getPolicy(): Promise<PolicyVersion> {
 export async function updatePolicy(data: PolicyUpdateRequest): Promise<PolicyUpdateResponse> {
   requireAuth();
 
+  MOCK_POLICY_HISTORY.forEach((item) => {
+    item.is_active = false;
+  });
   MOCK_POLICY.version += 1;
   MOCK_POLICY.content_yaml = data.content_yaml;
   MOCK_POLICY.updated_at = new Date().toISOString();
   MOCK_POLICY.updated_by = data.updated_by;
   MOCK_POLICY.comment = data.comment;
+  MOCK_POLICY_HISTORY.push({
+    version: MOCK_POLICY.version,
+    updated_at: MOCK_POLICY.updated_at,
+    updated_by: MOCK_POLICY.updated_by,
+    comment: MOCK_POLICY.comment,
+    is_active: true,
+  });
+  persistPolicy();
+  persistPolicyHistory();
 
   return mockDelay(400, {
     version: MOCK_POLICY.version,
@@ -749,27 +794,11 @@ export async function updatePolicy(data: PolicyUpdateRequest): Promise<PolicyUpd
 export async function getPolicyHistory(): Promise<PolicyHistoryResponse> {
   requireAuth();
 
-  const items: PolicyHistoryResponse['items'] = [
-    {
-      version: 1,
-      updated_at: '2026-11-20T18:00:00Z',
-      updated_by: 'admin',
-      comment: 'Initial policy version',
-      is_active: MOCK_POLICY.version === 1,
-    },
-  ];
+  const items = [...MOCK_POLICY_HISTORY].sort(
+    (a, b) => b.updated_at.localeCompare(a.updated_at) || b.version - a.version,
+  );
 
-  if (MOCK_POLICY.version > 1) {
-    items.push({
-      version: MOCK_POLICY.version,
-      updated_at: MOCK_POLICY.updated_at,
-      updated_by: MOCK_POLICY.updated_by,
-      comment: MOCK_POLICY.comment,
-      is_active: true,
-    });
-  }
-
-  return mockDelay(300, { items: items.reverse() });
+  return mockDelay(300, { items });
 }
 
 // ─── POST /api/confirm ────────────────────────────────────────────────────────

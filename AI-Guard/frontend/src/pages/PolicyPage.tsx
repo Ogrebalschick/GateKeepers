@@ -74,6 +74,7 @@ export default function PolicyPage() {
         comment: res.comment,
       };
       queryClient.setQueryData(['policy'], next);
+      void queryClient.invalidateQueries({ queryKey: ['policy'] });
       void queryClient.invalidateQueries({ queryKey: ['policy-history'] });
       setDraft(res.content_yaml);
       setComment('');
