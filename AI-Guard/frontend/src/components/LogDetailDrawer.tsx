@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { CheckCircle, Loader2, X, XCircle } from 'lucide-react';
 import DecisionBadge from './DecisionBadge';
 import RiskBadge from './RiskBadge';
 import type { LogDetail } from '../types';
@@ -7,6 +7,9 @@ interface Props {
   open: boolean;
   loading: boolean;
   detail: LogDetail | null;
+  confirmLoading?: boolean;
+  onConfirm?: () => void;
+  onReject?: () => void;
   onClose: () => void;
 }
 
@@ -23,7 +26,15 @@ function confirmationKey(detail: LogDetail): keyof typeof CONFIRM_STATUS {
   return 'pending';
 }
 
-export default function LogDetailDrawer({ open, loading, detail, onClose }: Props) {
+export default function LogDetailDrawer({
+  open,
+  loading,
+  detail,
+  confirmLoading = false,
+  onConfirm,
+  onReject,
+  onClose,
+}: Props) {
   if (!open) return null;
 
   const status = detail ? CONFIRM_STATUS[confirmationKey(detail)] : null;
@@ -86,6 +97,37 @@ export default function LogDetailDrawer({ open, loading, detail, onClose }: Prop
                   {status.label}
                 </span>
               </div>
+
+              {onConfirm && onReject && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onConfirm}
+                    disabled={confirmLoading}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700
+                               disabled:bg-gray-400 text-white px-3 py-2 rounded-lg
+                               text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {confirmLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4" />
+                    )}
+                    Подтвердить
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onReject}
+                    disabled={confirmLoading}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700
+                               disabled:bg-gray-400 text-white px-3 py-2 rounded-lg
+                               text-sm font-medium cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Отказать
+                  </button>
+                </div>
+              )}
 
               <Field
                 label="Контекст"

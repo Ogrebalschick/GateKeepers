@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Download, Loader2, X } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { DecisionBadge, RiskBadge } from '../components';
 import LogDetailDrawer from '../components/LogDetailDrawer';
 import LogFilters from '../components/LogFilters';
-import { exportLogs, getLogById, getLogs } from '../services/api';
+import { confirmAction, exportLogs, getLogById, getLogs } from '../services/api';
 import type { Decision, LogItem, RiskLevel } from '../types';
 
 interface Filters {
@@ -54,8 +54,10 @@ function clip(text: string, max = 80): string {
 }
 
 export default function LogsPage() {
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['logs', filters],
@@ -80,6 +82,29 @@ export default function LogsPage() {
     queryFn: () => getLogById(selectedId as number),
     enabled: selectedId != null,
   });
+
+  async function handleDecision(decision: 'approved' | 'rejected') {
+    if (!detail?.check_id) return;
+    setConfirmLoading(true);
+    try {
+      await confirmAction({
+        check_id: detail.check_id,
+        user_decision: decision,
+        user_id: localStorage.getItem('guard_user_id') ?? '',
+        comment: null,
+      });
+      void queryClient.invalidateQueries({ queryKey: ['logs'] });
+      void queryClient.invalidateQueries({ queryKey: ['log'] });
+      toast.success(decision === 'approved' ? 'Действие подтверждено' : 'Действие отклонено');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) toast.error('Уже подтверждено');
+      else if (status === 404) toast.error('Проверка не найдена');
+      else if (status !== 401) toast.error('Ошибка подтверждения');
+    } finally {
+      setConfirmLoading(false);
+    }
+  }
 
   function patch(partial: Partial<Filters>) {
     setFilters((prev) => ({ ...prev, ...partial, page: partial.page ?? 1 }));
@@ -241,6 +266,9 @@ export default function LogsPage() {
         open={selectedId != null}
         loading={detailLoading}
         detail={detail ?? null}
+        confirmLoading={confirmLoading}
+        onConfirm={() => handleDecision('approved')}
+        onReject={() => handleDecision('rejected')}
         onClose={() => setSelectedId(null)}
       />
     </div>

@@ -293,8 +293,11 @@ export default function CheckPage() {
       void queryClient.invalidateQueries({ queryKey: ['logs'] });
       void queryClient.invalidateQueries({ queryKey: ['log'] });
       toast.success(decision === 'approved' ? 'Действие подтверждено' : 'Действие отклонено');
-    } catch {
-      toast.error('Ошибка подтверждения');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) toast.error('Уже подтверждено');
+      else if (status === 404) toast.error('Проверка не найдена');
+      else if (status !== 401) toast.error('Ошибка подтверждения');
     } finally {
       setConfirmLoading(false);
     }

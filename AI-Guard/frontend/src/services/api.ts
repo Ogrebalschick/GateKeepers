@@ -647,24 +647,8 @@ export async function getPolicyHistory(): Promise<PolicyHistoryResponse> {
 
 // ─── POST /api/confirm ────────────────────────────────────────────────────────
 
-/**
- * Real: return apiClient.post<ConfirmResponse>('/api/confirm', data).then(r => r.data);
- */
 export async function confirmAction(data: ConfirmRequest): Promise<ConfirmResponse> {
-  requireAuth();
-
-  const log = MOCK_LOGS.find((item) => item.check_id === data.check_id);
-  if (log) {
-    log.confirm_status = data.user_decision;
-    persistMocks();
-  }
-
-  return mockDelay(300, {
-    check_id: data.check_id,
-    user_decision: data.user_decision,
-    confirmed_at: new Date().toISOString(),
-    confirmed_by: data.user_id,
-  });
+  return apiClient.post<ConfirmResponse>('/api/confirm', data).then((r) => r.data);
 }
 
 // ─── POST /api/sessions ───────────────────────────────────────────────────────
