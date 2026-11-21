@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Layout } from './components';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import CheckPage from './pages/CheckPage';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
@@ -23,11 +24,46 @@ export default function App() {
           {/* Все страницы — внутри Layout */}
           <Route element={<Layout />}>
             <Route path="/" element={<CheckPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/logs" element={<LogsPage />} />
-            <Route path="/policy" element={<PolicyPage />} />
-            <Route path="/sessions" element={<SessionsPage />} />
-            <Route path="/sessions/:sessionId" element={<SessionDetailPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/logs"
+              element={
+                <ProtectedRoute>
+                  <LogsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/policy"
+              element={
+                <ProtectedRoute>
+                  <PolicyPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sessions"
+              element={
+                <ProtectedRoute>
+                  <SessionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sessions/:sessionId"
+              element={
+                <ProtectedRoute>
+                  <SessionDetailPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
         </Routes>
       </BrowserRouter>

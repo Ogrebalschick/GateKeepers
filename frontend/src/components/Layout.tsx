@@ -1,28 +1,34 @@
 import {
   BarChart3,
-  ClipboardList,
+  FileText,
+  LogOut,
   Menu,
   MessageSquare,
   Search,
   Settings,
   Shield,
+  User,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { logout } from '../services/api';
+import { RoleBadge } from './RoleBadge';
 
 interface NavItem {
   to: string;
   Icon: ComponentType<{ className?: string }>;
   label: string;
+  roles: string[];
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', Icon: Search, label: 'Проверить' },
-  { to: '/dashboard', Icon: BarChart3, label: 'Дашборд' },
-  { to: '/logs', Icon: ClipboardList, label: 'Журнал' },
-  { to: '/policy', Icon: Settings, label: 'Политика' },
-  { to: '/sessions', Icon: MessageSquare, label: 'Сессии' },
+  { to: '/', Icon: Search, label: 'Проверить', roles: ['admin', 'sre', 'developer'] },
+  { to: '/dashboard', Icon: BarChart3, label: 'Дашборд', roles: ['admin', 'sre'] },
+  { to: '/logs', Icon: FileText, label: 'Журнал', roles: ['admin', 'sre', 'developer'] },
+  { to: '/policy', Icon: Settings, label: 'Политика', roles: ['admin', 'sre'] },
+  { to: '/sessions', Icon: MessageSquare, label: 'Сессии', roles: ['admin', 'sre', 'developer'] },
 ];
 
 function navClass({ isActive }: { isActive: boolean }) {
@@ -34,6 +40,10 @@ function navClass({ isActive }: { isActive: boolean }) {
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { username, role } = useCurrentUser();
+  const visibleItems = role
+    ? NAV_ITEMS.filter((item) => item.roles.includes(role))
+    : NAV_ITEMS.filter((item) => item.to === '/');
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -62,7 +72,7 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, Icon, label }) => (
+          {visibleItems.map(({ to, Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/'} className={navClass}>
               <Icon className="w-5 h-5 shrink-0" />
               <span>{label}</span>
@@ -70,9 +80,27 @@ export default function Layout() {
           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-slate-700 text-xs text-slate-500">
-          НЭТИ-НЕКСТ 2026 · Хакатон
+        <div className="border-t border-gray-700 p-4 mt-auto">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-white truncate">{username || 'Гость'}</div>
+              <RoleBadge role={role} />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Выйти
+          </button>
+          <p className="mt-3 text-xs text-slate-500">НЭТИ-НЕКСТ 2026 · Хакатон</p>
         </div>
       </aside>
 
