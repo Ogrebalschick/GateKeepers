@@ -30,7 +30,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     POLICY_PATH=/app/policy.yaml \
     MODEL_PATH=/app/models/guard_model.joblib \
-    BACKEND_URL=http://backend:8000 \
+    BACKEND_URL=http://backend:8081 \
     LLAMA_URL=http://llama:8080 \
     LLM_ENABLED=false
 

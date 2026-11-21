@@ -4,18 +4,24 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8081:8081"
     # volumes:
     #   - ./backend:/app     # ← ТОЛЬКО для разработки (hot-reload)
     env_file:
       - .env
     environment:
-      - DATABASE_URL=mariadb+pymysql://${DB_USER}:${DB_PASSWORD}@database:3306/${DB_NAME}
+      - DB_HOST=database
+      - ML_SERVICE_URL=http://ml-service:8000
+      - JWT_SECRET=change_me_in_production
+      - JWT_EXPIRATION=86400
+      - ADMIN_PASSWORD=demo_admin_2026
+      - SRE_PASSWORD=demo_sre_2026
+      - DEV_PASSWORD=demo_dev_2026
     depends_on:
       database:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -37,6 +43,8 @@ services:
     build:
       context: ./ml-service
       dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
     # ⚠️ эти два монтирования требуют реальных файлов на хосте:
     # volumes:
       # - ./model/model.gguf:/app/model.gguf:ro
@@ -44,6 +52,8 @@ services:
     # environment:
       # - MODEL_PATH=/app/model.gguf
       # - LLAMA_CPP_PATH=/app/llama.cpp
+    environment:
+      - BACKEND_URL=http://backend:8081
     depends_on:
       backend:
         condition: service_started
