@@ -1,5 +1,7 @@
 import {
+  ArrowRight,
   CheckCircle,
+  Clock,
   Loader2,
   Paperclip,
   Search,
@@ -9,8 +11,10 @@ import {
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { DecisionBadge, RiskBadge } from '../components';
+import DevOpsAgentMock, { type AgentStatus } from '../components/DevOpsAgentMock';
 import { checkPrompt, confirmAction } from '../services/api';
 import type { CheckResponse, UserRole } from '../types';
+import { getMockAgentResponse } from '../utils/mockAgentResponses';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,9 +56,10 @@ interface ResultCardProps {
   onConfirm: () => void;
   onReject: () => void;
   confirmLoading: boolean;
+  showActions: boolean;
 }
 
-function ResultCard({ result, onConfirm, onReject, confirmLoading }: ResultCardProps) {
+function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }: ResultCardProps) {
   const isConfirm = result.decision === 'confirm';
   const isBlock   = result.decision === 'block';
 
@@ -105,7 +110,7 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading }: ResultCardP
       </p>
 
       {/* Confirm/Reject buttons — only when decision === "confirm" */}
-      {isConfirm && (
+      {isConfirm && showActions && (
         <div className="flex gap-3 pt-1 border-t border-yellow-200">
           <button
             onClick={onConfirm}
@@ -136,6 +141,25 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading }: ResultCardP
   );
 }
 
+function FlowArrow({ status }: { status: AgentStatus }) {
+  const icon =
+    status === 'blocked' ? (
+      <X className="w-6 h-6 text-red-500" />
+    ) : status === 'pending_confirmation' ? (
+      <Clock className="w-6 h-6 text-yellow-500" />
+    ) : status === 'allowed' ? (
+      <ArrowRight className="w-6 h-6 text-green-500" />
+    ) : (
+      <ArrowRight className="w-6 h-6 text-gray-300" />
+    );
+
+  return (
+    <div className="flex items-center justify-center py-1 lg:py-0 lg:pt-16" aria-hidden>
+      <div className="rotate-90 lg:rotate-0 transition-all duration-500">{icon}</div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CheckPage() {
@@ -151,7 +175,9 @@ export default function CheckPage() {
   // Result state
   const [pageState,      setPageState]      = useState<PageState>('idle');
   const [result,         setResult]         = useState<CheckResponse | null>(null);
+  const [checkedPrompt,  setCheckedPrompt]  = useState('');
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [handoff, setHandoff] = useState<'pending' | 'approved' | 'rejected'>('pending');
 
   // ── Submit ──────────────────────────────────────────────────────────────────
 
@@ -161,6 +187,8 @@ export default function CheckPage() {
 
     setPageState('loading');
     setResult(null);
+    setHandoff('pending');
+    setCheckedPrompt(prompt.trim());
 
     try {
       const userId = localStorage.getItem('guard_user_id') ?? 'demo-user';
@@ -207,6 +235,7 @@ export default function CheckPage() {
         user_id:       userId,
         comment:       null,
       });
+      setHandoff(decision === 'approved' ? 'approved' : 'rejected');
       toast.success(
         decision === 'approved' ? 'Действие подтверждено' : 'Действие отклонено',
       );
@@ -219,8 +248,24 @@ export default function CheckPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  const agentStatus: AgentStatus =
+    pageState !== 'result' || !result
+      ? 'idle'
+      : result.decision === 'allow'
+        ? 'allowed'
+        : result.decision === 'block'
+          ? 'blocked'
+          : handoff === 'approved'
+            ? 'allowed'
+            : handoff === 'rejected'
+              ? 'blocked'
+              : 'pending_confirmation';
+
+  const agentResponse =
+    agentStatus === 'allowed' ? getMockAgentResponse(checkedPrompt) : undefined;
+
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       {/* Page title */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Проверка запроса</h1>
@@ -229,11 +274,11 @@ export default function CheckPage() {
         </p>
       </div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Form → Сторож → DevOps-ассистент */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_auto_minmax(0,1fr)] gap-4 lg:gap-3 items-start">
 
         {/* ── Left: Form ────────────────────────────────────────────────── */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 min-w-0">
 
           {/* Prompt textarea */}
           <div>
@@ -369,7 +414,7 @@ export default function CheckPage() {
         </form>
 
         {/* ── Right: Result ──────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-w-0">
           <div className="px-5 py-3.5 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-gray-700">Анализ безопасности</h2>
           </div>
@@ -383,10 +428,15 @@ export default function CheckPage() {
                 onConfirm={() => handleDecision('approved')}
                 onReject={() => handleDecision('rejected')}
                 confirmLoading={confirmLoading}
+                showActions={handoff === 'pending'}
               />
             )}
           </div>
         </div>
+
+        <FlowArrow status={agentStatus} />
+
+        <DevOpsAgentMock status={agentStatus} response={agentResponse} />
       </div>
     </div>
   );
