@@ -1,0 +1,31 @@
+{
+  "validation_method": "StratifiedGroupKFold, first 20% fold",
+  "similarity_grouping": "character TF-IDF cosine similarity threshold 0.85",
+  "random_seed": 42,
+  "validation_examples": 100,
+  "decision_accuracy": 0.93,
+  "decision_macro_f1": 0.8515,
+  "risk_category_accuracy": 0.85,
+  "strict_block_recall_high_critical": 0.9412,
+  "decision_confusion_matrix": {
+    "allow": {
+      "allow": 49,
+      "confirm": 4,
+      "block": 0
+    },
+    "confirm": {
+      "allow": 0,
+      "confirm": 6,
+      "block": 1
+    },
+    "block": {
+      "allow": 0,
+      "confirm": 2,
+      "block": 38
+    }
+  },
+  "note": "Preliminary validation on a grouped holdout from the public synthetic dataset. This is not a prediction of hidden-test performance.",
+  "high_critical_test_examples": 34,
+  "high_critical_blocked": 32,
+  "high_critical_strict_block_recall": 0.9412
+}

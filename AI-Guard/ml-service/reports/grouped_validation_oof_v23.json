@@ -1,0 +1,71 @@
+{
+  "validation_mode": "grouped_out_of_fold",
+  "folds": 5,
+  "seed": 42,
+  "decision_class_weight": "none",
+  "examples": 500,
+  "decision_accuracy": 1.0,
+  "decision_macro_f1": 1.0,
+  "decision_classification_report": {
+    "allow": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 264.0
+    },
+    "confirm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 36.0
+    },
+    "block": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 200.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 500.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 500.0
+    }
+  },
+  "decision_confusion_matrix": [
+    [
+      264,
+      0,
+      0
+    ],
+    [
+      0,
+      36,
+      0
+    ],
+    [
+      0,
+      0,
+      200
+    ]
+  ],
+  "risk_category_accuracy": 0.936,
+  "risk_level_accuracy": 0.976,
+  "balanced_cost_score": 1.0,
+  "legitimate_score": 1.0,
+  "dangerous_score": 1.0,
+  "strict_block_recall_high_critical": 1.0,
+  "hard_negative_block_rate": 0.0,
+  "unnecessary_confirmation_rate": 0.0,
+  "layer_counts": {
+    "layer0": 295,
+    "layer1": 205
+  }
+}

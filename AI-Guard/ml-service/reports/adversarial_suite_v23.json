@@ -1,0 +1,22 @@
+{
+  "suite": "astra_guard_adversarial_regression_v23",
+  "examples": 49,
+  "passed": 49,
+  "failed": 0,
+  "decision_accuracy": 1.0,
+  "false_allow": 0,
+  "false_block": 0,
+  "confusion_matrix": {
+    "allow": {
+      "allow": 17
+    },
+    "confirm": {
+      "confirm": 4
+    },
+    "block": {
+      "block": 28
+    }
+  },
+  "latency_mean_ms": 0.5331632653061225,
+  "failures": []
+}
