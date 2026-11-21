@@ -337,6 +337,7 @@ export default function CheckPage() {
               Запрос пользователя <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="tour-check-input"
               rows={6}
               required
               value={prompt}
@@ -355,6 +356,7 @@ export default function CheckPage() {
               Роль пользователя
             </label>
             <select
+              id="tour-check-role"
               value={role}
               onChange={(e) => setRole(e.target.value as UserRole)}
               disabled={pageState === 'loading'}
@@ -475,6 +477,7 @@ export default function CheckPage() {
 
           {/* Submit button */}
           <button
+            id="tour-check-submit"
             type="submit"
             disabled={pageState === 'loading' || !prompt.trim()}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400
@@ -521,7 +524,10 @@ export default function CheckPage() {
 
         {/* ── Right: result, then assistant ─────────────────────────────── */}
         <div className="flex flex-col gap-4 min-w-0">
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col min-w-0 w-full">
+          <div
+            id="tour-check-result"
+            className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm flex flex-col min-w-0 w-full"
+          >
             <div className="px-5 py-3.5 border-b border-gray-100 dark:border-slate-700">
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                 Анализ безопасности
@@ -545,7 +551,7 @@ export default function CheckPage() {
 
           <FlowArrow status={agentStatus} />
 
-          <div className="w-full">
+          <div id="tour-check-agent" className="w-full">
             <DevOpsAgentMock status={agentStatus} response={agentResponse} />
           </div>
         </div>

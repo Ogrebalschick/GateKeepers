@@ -172,7 +172,7 @@ export default function LogsPage() {
       ) : (
         <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[880px]">
+            <table id="tour-logs-table" className="w-full text-sm min-w-[880px]">
               <thead>
                 <tr className="bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-gray-200 text-sm font-medium text-left">
                   <th className="px-4 py-2.5">Время</th>

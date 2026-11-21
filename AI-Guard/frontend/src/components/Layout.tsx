@@ -1,6 +1,7 @@
 import {
   BarChart3,
   FileText,
+  GraduationCap,
   LogIn,
   LogOut,
   Menu,
@@ -11,26 +12,52 @@ import {
   User,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { logout } from '../services/api';
 import { RoleBadge } from './RoleBadge';
 import { ThemeToggle } from './ThemeToggle';
+import { useTour } from './Tour';
 
 interface NavItem {
   to: string;
   Icon: ComponentType<{ className?: string }>;
   label: string;
   roles: string[];
+  tourId?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', Icon: Search, label: 'Проверить', roles: ['admin', 'sre', 'developer'] },
-  { to: '/dashboard', Icon: BarChart3, label: 'Дашборд', roles: ['admin', 'sre'] },
-  { to: '/logs', Icon: FileText, label: 'Журнал', roles: ['admin', 'sre', 'developer'] },
-  { to: '/policy', Icon: Settings, label: 'Политика', roles: ['admin', 'sre'] },
-  { to: '/sessions', Icon: MessageSquare, label: 'Сессии', roles: ['admin', 'sre', 'developer'] },
+  {
+    to: '/dashboard',
+    Icon: BarChart3,
+    label: 'Дашборд',
+    roles: ['admin', 'sre'],
+    tourId: 'tour-dashboard-link',
+  },
+  {
+    to: '/logs',
+    Icon: FileText,
+    label: 'Журнал',
+    roles: ['admin', 'sre', 'developer'],
+    tourId: 'tour-logs-link',
+  },
+  {
+    to: '/policy',
+    Icon: Settings,
+    label: 'Политика',
+    roles: ['admin', 'sre'],
+    tourId: 'tour-policy-link',
+  },
+  {
+    to: '/sessions',
+    Icon: MessageSquare,
+    label: 'Сессии',
+    roles: ['admin', 'sre', 'developer'],
+    tourId: 'tour-sessions-link',
+  },
 ];
 
 function navClass({ isActive }: { isActive: boolean }) {
@@ -45,9 +72,18 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { username, role, isAuthenticated } = useCurrentUser();
-  const visibleItems = role
-    ? NAV_ITEMS.filter((item) => item.roles.includes(role))
-    : NAV_ITEMS.filter((item) => item.to === '/');
+  const { startTour, running } = useTour();
+
+  useEffect(() => {
+    if (running) setSidebarOpen(true);
+  }, [running]);
+
+  const visibleItems =
+    running && isAuthenticated
+      ? NAV_ITEMS
+      : role
+        ? NAV_ITEMS.filter((item) => item.roles.includes(role))
+        : NAV_ITEMS.filter((item) => item.to === '/');
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -76,8 +112,8 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {visibleItems.map(({ to, Icon, label }) => (
-            <NavLink key={to} to={to} end={to === '/'} className={navClass}>
+          {visibleItems.map(({ to, Icon, label, tourId }) => (
+            <NavLink key={to} id={tourId} to={to} end={to === '/'} className={navClass}>
               <Icon className="w-5 h-5 shrink-0" />
               <span>{label}</span>
             </NavLink>
@@ -94,6 +130,19 @@ export default function Layout() {
               <RoleBadge role={role} />
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSidebarOpen(true);
+              startTour();
+            }}
+            className="mb-3 w-full flex items-center justify-center gap-2 px-3 py-2 text-sm
+                       border border-slate-600 text-slate-300 rounded-lg
+                       hover:border-blue-500 hover:text-blue-400 transition cursor-pointer"
+          >
+            <GraduationCap className="w-4 h-4" />
+            Пройти обучение
+          </button>
           <div className="mb-3">
             <ThemeToggle />
           </div>
