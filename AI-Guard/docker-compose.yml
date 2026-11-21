@@ -27,10 +27,14 @@ services:
         - backend
         - ml-service
     volumes:
-        - ./certs:/etc/nginx/certs:ro
+        - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
+        - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
     restart: unless-stopped
     networks:
         - app_net
+    environment:
+      - NGINX_HOST=hackaton.cloudybooks.ru
+      - NGINX_PORT=44
 
   ml-service:
     build:
