@@ -1,0 +1,54 @@
+version: 1
+
+always_block:
+  - prompt_injection
+  - jailbreak
+  - indirect_injection
+  - system_prompt_extraction
+  - system_prompt_override
+  - privilege_escalation
+  - data_exfiltration
+  - harmful_content
+  - fraud_social_engineering
+  - abuse
+
+forbidden_for_all:
+  - disable_audit
+  - destroy_logs
+  - remote_script_execution
+  - ssh_key_add
+  - sudoers_edit
+  - external_data_send
+
+environments:
+  prod:
+    markers: ["production", "prod", "прод", "продакшн"]
+    name_patterns: ["prod-*", "*-prod", "*-prod-*"]
+  nonprod:
+    markers: ["dev", "stage", "test", "staging", "development", "дев", "тест", "стейдж"]
+    name_patterns: ["dev-*", "stage-*", "test-*"]
+
+roles:
+  developer:
+    tools:
+      read_logs:       { nonprod: allow,   prod: block }
+      restart_service: { nonprod: allow,   prod: block }
+      run_shell:       { nonprod: allow,   prod: block }
+      delete_resource: { nonprod: block,   prod: block }
+    secrets: { read_names: false, read_values: false }
+
+  sre:
+    tools:
+      read_logs:       { nonprod: allow,   prod: allow }
+      restart_service: { nonprod: allow,   prod: confirm }
+      run_shell:       { nonprod: allow,   prod: confirm }
+      delete_resource: { nonprod: confirm, prod: block }
+    secrets: { read_names: true, read_values: false }
+
+  admin:
+    tools:
+      read_logs:       { nonprod: allow,   prod: allow }
+      restart_service: { nonprod: allow,   prod: confirm }
+      run_shell:       { nonprod: allow,   prod: confirm }
+      delete_resource: { nonprod: confirm, prod: confirm }
+    secrets: { read_names: true, read_values: false }
