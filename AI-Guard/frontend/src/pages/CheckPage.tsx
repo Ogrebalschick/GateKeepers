@@ -243,10 +243,12 @@ export default function CheckPage() {
         session_id: sessionId,
       });
 
+      void queryClient.invalidateQueries({ queryKey: ['logs'] });
+      void queryClient.invalidateQueries({ queryKey: ['stats'] });
+      void queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      void queryClient.invalidateQueries({ queryKey: ['sessions'] });
       if (sessionId) {
-        void queryClient.invalidateQueries({ queryKey: ['sessions'] });
         void queryClient.invalidateQueries({ queryKey: ['session', sessionId] });
-        void queryClient.invalidateQueries({ queryKey: ['logs'] });
       }
 
       setResult(data);

@@ -72,6 +72,7 @@ export default function LogsPage() {
         per_page: filters.per_page,
       }),
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 
   const { data: detail, isLoading: detailLoading } = useQuery({

@@ -31,6 +31,7 @@ export default function SessionDetailPage() {
     queryFn: () => getSessionById(sessionId),
     enabled: sessionId.length > 0,
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 
   const messages = [...(data?.messages ?? [])].sort((a, b) =>

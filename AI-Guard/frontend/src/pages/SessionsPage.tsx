@@ -40,6 +40,7 @@ export default function SessionsPage() {
     queryKey: ['sessions'],
     queryFn: () => getSessions(),
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 
   const items = data?.items ?? [];

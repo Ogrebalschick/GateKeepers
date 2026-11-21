@@ -104,12 +104,14 @@ export default function DashboardPage() {
     queryKey: ['stats'],
     queryFn: getStats,
     refetchInterval: 30_000,
+    refetchOnMount: 'always',
   });
 
   const { data: timeline, isLoading: timelineLoading } = useQuery<{ items: TimelineItem[] }>({
     queryKey: ['timeline'],
     queryFn: () => getTimeline(24),
     refetchInterval: 30_000,
+    refetchOnMount: 'always',
   });
 
   // Prepare chart data

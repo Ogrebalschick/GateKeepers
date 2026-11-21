@@ -35,6 +35,7 @@ import type {
   SessionsParams,
   SessionsResponse,
   StatsResponse,
+  TimelineItem,
   TimelineResponse,
 } from '../types';
 
@@ -357,6 +358,40 @@ const MOCK_SESSIONS: Session[] = [
   },
 ];
 
+const MOCK_LOGS_KEY = 'guard_mock_logs';
+const MOCK_SESSIONS_KEY = 'guard_mock_sessions';
+const MOCK_MULTI_STEP_KEY = 'guard_mock_multi_step';
+
+function readStored<T>(key: string): T | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function persistMocks(): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(MOCK_LOGS_KEY, JSON.stringify(MOCK_LOGS));
+  localStorage.setItem(MOCK_SESSIONS_KEY, JSON.stringify(MOCK_SESSIONS));
+  localStorage.setItem(MOCK_MULTI_STEP_KEY, JSON.stringify([...MULTI_STEP_CHECKS]));
+}
+
+function hydrateMocks(): void {
+  const logs = readStored<LogItem[]>(MOCK_LOGS_KEY);
+  const sessions = readStored<Session[]>(MOCK_SESSIONS_KEY);
+  const attacks = readStored<string[]>(MOCK_MULTI_STEP_KEY);
+  if (logs) MOCK_LOGS.splice(0, MOCK_LOGS.length, ...logs);
+  if (sessions) MOCK_SESSIONS.splice(0, MOCK_SESSIONS.length, ...sessions);
+  attacks?.forEach((id) => MULTI_STEP_CHECKS.add(id));
+  if (!logs || !sessions) persistMocks();
+}
+
+hydrateMocks();
+
 // =============================================================================
 // API functions
 // =============================================================================
@@ -459,6 +494,13 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
     lastTwo.every((item) => item.decision === 'block');
   response.is_multi_step_attack = keywordAttack || thirdBlock;
 
+  if (payload.session_id) {
+    const session = MOCK_SESSIONS.find((item) => item.session_id === payload.session_id);
+    if (session?.status === 'closed') {
+      throw new Error('Сессия закрыта: лимит запросов исчерпан');
+    }
+  }
+
   recordSessionCheck(payload, response);
 
   return mockDelay(400, response);
@@ -494,6 +536,7 @@ function recordSessionCheck(payload: CheckRequest, response: CheckResponse): voi
   });
 
   if (response.is_multi_step_attack) MULTI_STEP_CHECKS.add(response.check_id);
+  persistMocks();
 }
 
 function touchSession(
@@ -520,6 +563,9 @@ function touchSession(
 
   session.request_count += 1;
   session.last_activity_at = now;
+  if (session.request_count >= session.max_requests) {
+    session.status = 'closed';
+  }
   if (response.is_multi_step_attack && !session.threat_flags.includes('multi_step_attack')) {
     session.threat_flags.push('multi_step_attack');
   }
@@ -735,7 +781,10 @@ export async function confirmAction(data: ConfirmRequest): Promise<ConfirmRespon
   requireAuth();
 
   const log = MOCK_LOGS.find((item) => item.check_id === data.check_id);
-  if (log) log.confirm_status = data.user_decision;
+  if (log) {
+    log.confirm_status = data.user_decision;
+    persistMocks();
+  }
 
   return mockDelay(300, {
     check_id: data.check_id,
@@ -766,6 +815,7 @@ export async function createSession(data: SessionCreateRequest): Promise<Session
   };
 
   MOCK_SESSIONS.push(session);
+  persistMocks();
   return mockDelay(300, { ...session });
 }
 
@@ -836,24 +886,50 @@ export async function getSessionById(id: string): Promise<SessionDetail> {
 /**
  * Real: return apiClient.get<StatsResponse>('/api/stats').then(r => r.data);
  */
+function percentile(values: number[], ratio: number): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(ratio * sorted.length) - 1));
+  return +sorted[index].toFixed(1);
+}
+
 export async function getStats(): Promise<StatsResponse> {
   requireAuth();
 
+  const logs = MOCK_LOGS;
+  const byDecision: StatsResponse['by_decision'] = { allow: 0, confirm: 0, block: 0 };
+  const byRisk: StatsResponse['by_risk_level'] = {
+    none: 0,
+    low: 0,
+    medium: 0,
+    high: 0,
+    critical: 0,
+  };
+  const categories = new Map<string, number>();
+  const layers: Record<string, number> = {};
+
+  for (const log of logs) {
+    byDecision[log.decision] += 1;
+    if (log.risk_level in byRisk) byRisk[log.risk_level] += 1;
+    categories.set(log.risk_category, (categories.get(log.risk_category) ?? 0) + 1);
+    layers[log.pipeline_layer] = (layers[log.pipeline_layer] ?? 0) + 1;
+  }
+
+  const latencies = logs.map((log) => log.latency_ms);
+  const topCategories = [...categories.entries()]
+    .map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
   return mockDelay(300, {
-    total_checks: 7,
-    by_decision: { allow: 2, confirm: 2, block: 3 },
-    by_risk_level: { none: 1, low: 1, medium: 2, high: 2, critical: 1 },
-    top_categories: [
-      { category: 'jailbreak', count: 2 },
-      { category: 'sensitive_action', count: 2 },
-      { category: 'data_exfiltration', count: 1 },
-      { category: 'system_prompt_extraction', count: 1 },
-      { category: 'none', count: 1 },
-    ],
-    latency_p50_ms: 8.1,
-    latency_p95_ms: 12.3,
-    latency_p99_ms: 12.3,
-    by_pipeline_layer: { layer0: 5, layer1: 2, layer2: 0 },
+    total_checks: logs.length,
+    by_decision: byDecision,
+    by_risk_level: byRisk,
+    top_categories: topCategories,
+    latency_p50_ms: percentile(latencies, 0.5),
+    latency_p95_ms: percentile(latencies, 0.95),
+    latency_p99_ms: percentile(latencies, 0.99),
+    by_pipeline_layer: layers,
     period_hours: 24,
   });
 }
@@ -866,22 +942,37 @@ export async function getStats(): Promise<StatsResponse> {
 export async function getTimeline(hours = 24): Promise<TimelineResponse> {
   requireAuth();
 
-  const now = new Date();
-  const items = Array.from({ length: Math.min(hours, 12) }, (_, i) => {
-    const hour = new Date(now.getTime() - (hours - 1 - i) * 3_600_000);
-    hour.setMinutes(0, 0, 0);
-    const allow = Math.floor(Math.random() * 5);
-    const confirm = Math.floor(Math.random() * 3);
-    const block = Math.floor(Math.random() * 4);
-    return {
+  const end = new Date();
+  end.setMinutes(0, 0, 0);
+  const buckets = new Map<string, TimelineItem & { latencySum: number }>();
+
+  for (let i = hours - 1; i >= 0; i -= 1) {
+    const hour = new Date(end.getTime() - i * 3_600_000);
+    buckets.set(hour.toISOString(), {
       hour: hour.toISOString(),
-      allow,
-      confirm,
-      block,
-      total: allow + confirm + block,
-      avg_latency_ms: +(Math.random() * 10 + 3).toFixed(1),
-    };
-  });
+      allow: 0,
+      confirm: 0,
+      block: 0,
+      total: 0,
+      avg_latency_ms: 0,
+      latencySum: 0,
+    });
+  }
+
+  for (const log of MOCK_LOGS) {
+    const hour = new Date(log.created_at);
+    hour.setMinutes(0, 0, 0);
+    const bucket = buckets.get(hour.toISOString());
+    if (!bucket) continue;
+    bucket[log.decision] += 1;
+    bucket.total += 1;
+    bucket.latencySum += log.latency_ms;
+  }
+
+  const items = [...buckets.values()].map(({ latencySum, ...item }) => ({
+    ...item,
+    avg_latency_ms: item.total ? +(latencySum / item.total).toFixed(1) : 0,
+  }));
 
   return mockDelay(300, { items });
 }
