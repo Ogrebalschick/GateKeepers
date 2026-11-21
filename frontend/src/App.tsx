@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import LogsPage from './pages/LogsPage';
 import PolicyPage from './pages/PolicyPage';
+import SessionDetailPage from './pages/SessionDetailPage';
 import SessionsPage from './pages/SessionsPage';
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/logs" element={<LogsPage />} />
             <Route path="/policy" element={<PolicyPage />} />
             <Route path="/sessions" element={<SessionsPage />} />
+            <Route path="/sessions/:sessionId" element={<SessionDetailPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
