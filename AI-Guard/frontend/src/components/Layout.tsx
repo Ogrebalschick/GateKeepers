@@ -96,7 +96,7 @@ export default function Layout() {
             onClick={() => {
               logout();
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Выйти
