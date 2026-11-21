@@ -1,10 +1,33 @@
-FROM python:3.11-slim
+# FROM python:3.11-slim
+#
+# WORKDIR /app
+# ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+#
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     gcc curl default-libmysqlclient-dev pkg-config \
+#     && rm -rf /var/lib/apt/lists/*
+#
+# COPY requirements.txt .
+# RUN pip install -r requirements.txt
+#
+# COPY app/ ./app/
+#
+# EXPOSE 8000
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
+FROM archlinux:base
 WORKDIR /app
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+
+# Установка зависимостей через pacman
+RUN pacman -Sy --noconfirm \
+    gcc curl libmysqlclient-dev pkg-config \
+    && pacman -Sc --noconfirm
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-COPY . .
+COPY app/ ./app/
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+EXPOSE 8000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
