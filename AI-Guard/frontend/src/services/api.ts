@@ -139,6 +139,8 @@ const DEMO_CREDENTIALS: Record<
 
 // ─── Mock logs ────────────────────────────────────────────────────────────────
 
+const MULTI_STEP_CHECKS = new Set<string>();
+
 const MOCK_LOGS: LogItem[] = [
   {
     id: 1,
@@ -395,7 +397,9 @@ export async function login(username: string, password: string): Promise<LoginRe
 export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse> {
   // No requireAuth() — this endpoint is public by design
 
+  const keywordAttack = /multi|атака|подряд/i.test(payload.user_prompt);
   const isBlocked =
+    keywordAttack ||
     /ignore|jailbreak|DAN|act as|forget your instructions|system prompt|write malware|hack/i.test(
       payload.user_prompt,
     );
@@ -408,9 +412,11 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
     ? {
         check_id: crypto.randomUUID(),
         decision: 'block',
-        risk_level: 'high',
+        risk_level: keywordAttack ? 'critical' : 'high',
         risk_category: 'jailbreak',
-        explanation: 'Prompt attempts to override AI safety constraints.',
+        explanation: keywordAttack
+          ? 'Обнаружена многошаговая атака в рамках одной сессии.'
+          : 'Prompt attempts to override AI safety constraints.',
         latency_ms: 8.5,
         pipeline_layer: 'layer0',
       }
@@ -435,7 +441,71 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
           pipeline_layer: 'layer0',
         };
 
+  const prior = payload.session_id
+    ? MOCK_LOGS.filter((item) => item.session_id === payload.session_id)
+    : [];
+  const lastTwo = prior.slice(-2);
+  const thirdBlock =
+    response.decision === 'block' &&
+    lastTwo.length === 2 &&
+    lastTwo.every((item) => item.decision === 'block');
+  response.is_multi_step_attack = keywordAttack || thirdBlock;
+
+  if (payload.session_id) {
+    recordSessionCheck(payload, response);
+  }
+
   return mockDelay(400, response);
+}
+
+function recordSessionCheck(payload: CheckRequest, response: CheckResponse): void {
+  const sessionId = payload.session_id;
+  if (!sessionId) return;
+
+  const now = new Date().toISOString();
+  let session = MOCK_SESSIONS.find((item) => item.session_id === sessionId);
+  if (!session) {
+    session = {
+      session_id: sessionId,
+      created_at: now,
+      user_id: payload.context.user_id,
+      user_role: payload.context.user_role,
+      max_requests: 100,
+      request_count: 0,
+      status: 'active',
+      last_activity_at: now,
+      threat_flags: [],
+    };
+    MOCK_SESSIONS.push(session);
+  }
+
+  session.request_count += 1;
+  session.last_activity_at = now;
+  if (response.is_multi_step_attack && !session.threat_flags.includes('multi_step_attack')) {
+    session.threat_flags.push('multi_step_attack');
+  }
+
+  const nextId = MOCK_LOGS.reduce((max, item) => Math.max(max, item.id), 0) + 1;
+  MOCK_LOGS.push({
+    id: nextId,
+    check_id: response.check_id,
+    created_at: now,
+    user_prompt: payload.user_prompt,
+    user_role: payload.context.user_role,
+    user_id: payload.context.user_id,
+    user_name: payload.context.user_name,
+    decision: response.decision,
+    risk_level: response.risk_level,
+    risk_category: response.risk_category,
+    explanation: response.explanation,
+    latency_ms: response.latency_ms,
+    pipeline_layer: response.pipeline_layer,
+    has_attachments: payload.context.attachments.length > 0,
+    session_id: sessionId,
+    policy_version: 1,
+  });
+
+  if (response.is_multi_step_attack) MULTI_STEP_CHECKS.add(response.check_id);
 }
 
 // ─── GET /api/logs ────────────────────────────────────────────────────────────
@@ -727,7 +797,7 @@ export async function getSessionById(id: string): Promise<SessionDetail> {
     risk_category: l.risk_category,
     explanation: l.explanation,
     latency_ms: l.latency_ms,
-    is_multi_step_attack: false,
+    is_multi_step_attack: MULTI_STEP_CHECKS.has(l.check_id),
   }));
 
   return mockDelay(300, { ...session, messages });

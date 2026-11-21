@@ -96,10 +96,10 @@ function MessageCard({ message, index }: { message: SessionMessage; index: numbe
         <DecisionBadge decision={message.decision} size="md" />
         <RiskBadge riskLevel={message.risk_level} size="md" />
         {message.is_multi_step_attack && (
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            Многошаговая атака
-          </span>
+          <div className="w-full bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded flex items-center gap-2 text-sm font-medium">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            Многошаговая атака обнаружена
+          </div>
         )}
         <span className="text-xs text-gray-500 ml-auto">{fmtDate(message.created_at)}</span>
       </div>

@@ -83,6 +83,7 @@ export interface CheckResponse {
   latency_ms: number;
   pipeline_layer: string;
   check_id: string;
+  is_multi_step_attack?: boolean;
 }
 
 // ─── GET /api/logs ────────────────────────────────────────────────────────────
