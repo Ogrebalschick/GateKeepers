@@ -1,4 +1,4 @@
-import { ArrowRight, GraduationCap, Loader2, Shield } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2, Shield } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -36,6 +36,7 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function fillDemo(account: (typeof DEMO_ACCOUNTS)[number]) {
@@ -113,19 +114,31 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Пароль
               </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                required
-                disabled={loading}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           disabled:bg-gray-50 disabled:text-gray-400 transition"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  required
+                  disabled={loading}
+                  className="w-full pl-4 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                             disabled:bg-gray-50 disabled:text-gray-400 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  disabled={loading}
+                  aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400
+                             hover:opacity-70 transition cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
