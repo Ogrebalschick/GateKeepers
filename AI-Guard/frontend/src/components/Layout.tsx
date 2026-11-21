@@ -1,6 +1,7 @@
 import {
   BarChart3,
   FileText,
+  LogIn,
   LogOut,
   Menu,
   MessageSquare,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { logout } from '../services/api';
 import { RoleBadge } from './RoleBadge';
@@ -41,7 +42,8 @@ function navClass({ isActive }: { isActive: boolean }) {
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { username, role } = useCurrentUser();
+  const navigate = useNavigate();
+  const { username, role, isAuthenticated } = useCurrentUser();
   const visibleItems = role
     ? NAV_ITEMS.filter((item) => item.roles.includes(role))
     : NAV_ITEMS.filter((item) => item.to === '/');
@@ -91,16 +93,27 @@ export default function Layout() {
               <RoleBadge role={role} />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              logout();
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-            Выйти
-          </button>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+              }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+              Выйти
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-green-500 hover:text-green-400 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+            >
+              <LogIn className="w-4 h-4" />
+              Войти
+            </button>
+          )}
           <p className="mt-3 text-xs text-slate-500">НЭТИ-НЕКСТ 2026 · Хакатон</p>
         </div>
       </aside>

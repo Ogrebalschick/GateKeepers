@@ -51,10 +51,10 @@ export function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** Clear session and redirect to /login. */
+/** Clear session and return to the public home page. */
 export function logout(): void {
   GUARD_KEYS.forEach((k) => localStorage.removeItem(k));
-  window.location.href = '/login';
+  window.location.href = '/';
 }
 
 function clearSession(): void {
