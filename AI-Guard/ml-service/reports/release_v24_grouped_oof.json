@@ -1,0 +1,115 @@
+{
+  "validation_mode": "grouped_out_of_fold",
+  "validation_version": "2.4.0",
+  "folds": 5,
+  "seed": 42,
+  "decision_class_weight": "none",
+  "examples": 500,
+  "training_augmented_rows": 0,
+  "augmentation_sources": [],
+  "full_pipeline": {
+    "accuracy": 0.998,
+    "macro_f1": 0.9948012788853942,
+    "confusion_matrix": [
+      [
+        263,
+        1,
+        0
+      ],
+      [
+        0,
+        36,
+        0
+      ],
+      [
+        0,
+        0,
+        200
+      ]
+    ],
+    "balanced_cost_score": 0.9994441356309061,
+    "legitimate_score": 0.9988888888888889,
+    "dangerous_score": 1.0,
+    "strict_block_recall_high_critical": 1.0,
+    "hard_negative_block_rate": 0.0,
+    "unnecessary_confirmation_rate": 0.003787878787878788,
+    "risk_category_accuracy_block_examples": 1.0,
+    "risk_level_accuracy": 0.998,
+    "layer_counts": {
+      "layer0": 290,
+      "layer1": 210
+    },
+    "layer0_rule_coverage": 0.58,
+    "layer0_decision_accuracy": 1.0,
+    "layer0_risk_category_accuracy_block_examples": 1.0,
+    "layer1_decision_accuracy": 0.9952380952380953,
+    "layer1_risk_category_accuracy_block_examples": 1.0,
+    "layer1_strict_block_recall_high_critical": 1.0,
+    "layer1_hard_negative_block_rate": 0.0
+  },
+  "model_only": {
+    "accuracy": 0.894,
+    "macro_f1": 0.8229139281770861,
+    "confusion_matrix": [
+      [
+        244,
+        12,
+        8
+      ],
+      [
+        2,
+        30,
+        4
+      ],
+      [
+        10,
+        17,
+        173
+      ]
+    ],
+    "balanced_cost_score": 0.9454704246697619,
+    "legitimate_score": 0.9488888888888889,
+    "dangerous_score": 0.9420765027322404,
+    "strict_block_recall_high_critical": 0.8855421686746988,
+    "hard_negative_block_rate": 0.03,
+    "unnecessary_confirmation_rate": 0.045454545454545456,
+    "risk_category_accuracy_block_examples": 0.64,
+    "risk_level_accuracy": 0.814,
+    "decision_classification_report": {
+      "allow": {
+        "precision": 0.953125,
+        "recall": 0.9242424242424242,
+        "f1-score": 0.9384615384615385,
+        "support": 264.0
+      },
+      "confirm": {
+        "precision": 0.5084745762711864,
+        "recall": 0.8333333333333334,
+        "f1-score": 0.631578947368421,
+        "support": 36.0
+      },
+      "block": {
+        "precision": 0.9351351351351351,
+        "recall": 0.865,
+        "f1-score": 0.8987012987012987,
+        "support": 200.0
+      },
+      "accuracy": 0.894,
+      "macro avg": {
+        "precision": 0.7989115704687739,
+        "recall": 0.8741919191919192,
+        "f1-score": 0.8229139281770861,
+        "support": 500.0
+      },
+      "weighted avg": {
+        "precision": 0.9139142235455795,
+        "recall": 0.894,
+        "f1-score": 0.900461895998738,
+        "support": 500.0
+      }
+    }
+  },
+  "feature_schema": "v2.4_intent_normalized_role_tagged_context",
+  "category_training_scope": "all_examples_with_threat_only_inference_for_block",
+  "risk_level_training_scope": "non_allow_examples_only"
+}

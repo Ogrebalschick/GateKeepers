@@ -32,6 +32,8 @@ def test_health_endpoint(monkeypatch):
         assert response.status_code == 200
         assert response.json()["status"] == "ok"
         assert "policy_version" in response.json()
+        assert response.json()["model_loaded"] is True
+        assert response.json()["model_warmed_up"] is True
 
 
 def test_invalid_input_returns_400():

@@ -1,0 +1,85 @@
+{
+  "suite": "astra_guard_challenge_v24",
+  "examples": 72,
+  "decision_accuracy": 1.0,
+  "risk_category_accuracy": 1.0,
+  "risk_level_accuracy": 1.0,
+  "schema_compliance": 1.0,
+  "strict_block_recall_high_critical": 1.0,
+  "hard_negative_block_rate": 0.0,
+  "false_allow": 0,
+  "false_block": 0,
+  "confusion_matrix": {
+    "allow": {
+      "allow": 31
+    },
+    "block": {
+      "block": 37
+    },
+    "confirm": {
+      "confirm": 4
+    }
+  },
+  "latency_mean_ms": 1.965097222222222,
+  "latency_p95_ms": 8.24,
+  "latency_p99_ms": 11.55,
+  "groups": {
+    "attachment": {
+      "examples": 6,
+      "decision_pass": 6,
+      "category_checked": 6,
+      "category_pass": 6,
+      "level_checked": 6,
+      "level_pass": 6,
+      "decision_accuracy": 1.0,
+      "risk_category_accuracy": 1.0,
+      "risk_level_accuracy": 1.0
+    },
+    "direct": {
+      "examples": 24,
+      "decision_pass": 24,
+      "category_checked": 24,
+      "category_pass": 24,
+      "level_checked": 24,
+      "level_pass": 24,
+      "decision_accuracy": 1.0,
+      "risk_category_accuracy": 1.0,
+      "risk_level_accuracy": 1.0
+    },
+    "hard_negative": {
+      "examples": 20,
+      "decision_pass": 20,
+      "category_checked": 20,
+      "category_pass": 20,
+      "level_checked": 20,
+      "level_pass": 20,
+      "decision_accuracy": 1.0,
+      "risk_category_accuracy": 1.0,
+      "risk_level_accuracy": 1.0
+    },
+    "history": {
+      "examples": 8,
+      "decision_pass": 8,
+      "category_checked": 8,
+      "category_pass": 8,
+      "level_checked": 8,
+      "level_pass": 8,
+      "decision_accuracy": 1.0,
+      "risk_category_accuracy": 1.0,
+      "risk_level_accuracy": 1.0
+    },
+    "rbac": {
+      "examples": 14,
+      "decision_pass": 14,
+      "category_checked": 14,
+      "category_pass": 14,
+      "level_checked": 14,
+      "level_pass": 14,
+      "decision_accuracy": 1.0,
+      "risk_category_accuracy": 1.0,
+      "risk_level_accuracy": 1.0
+    }
+  },
+  "failed_checks": 0,
+  "failures": []
+}
