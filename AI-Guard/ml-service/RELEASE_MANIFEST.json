@@ -1,7 +1,7 @@
 {
   "release": "Astra Guard ML Service",
-  "version": "2.5.0",
-  "release_status": "release_candidate",
+  "version": "2.6.0-rc1",
+  "release_status": "release_candidate_layer2_verified_docker_build_pending",
   "training": {
     "dataset": "astra_public_v2/dev.jsonl + data/augmentation_v25.jsonl",
     "public_rows": 500,
@@ -15,8 +15,9 @@
   },
   "verification": {
     "pytest": {
-      "passed": 184,
-      "failed": 0
+      "passed": 211,
+      "failed": 0,
+      "python": "3.14.0"
     },
     "official_evaluator_v2": {
       "examples": 500,
@@ -26,7 +27,10 @@
       "strict_high_critical_block_recall": 1.0,
       "hard_negative_block_rate": 0.0,
       "risk_category_accuracy": 1.0,
-      "p95_ms": 15.943363
+      "p95_ms": 16.690270000253804,
+      "mean_ms": 6.247813702026178,
+      "measurement_mode": "endpoint",
+      "llm_enabled": false
     },
     "challenge_v26_dev": {
       "examples": 91,
@@ -87,20 +91,71 @@
     "official_evaluator_unit_tests": {
       "passed": 5,
       "failed": 0
+    },
+    "layer2_mock_tests": {
+      "passed": 27,
+      "failed": 0,
+      "coverage": [
+        "health probe",
+        "completion request",
+        "connection retry",
+        "timeout no-retry",
+        "JSON extraction and validation",
+        "confidence routing",
+        "fail-closed fallback",
+        "server tokenizer budget",
+        "schema-constrained generation",
+        "isolated final JSON",
+        "concurrent requests during inference"
+      ]
+    },
+    "local_http_py314": {
+      "live_report": "reports/verification_live.json",
+      "live_score": 1.0,
+      "live_cases_by_layer": {
+        "layer0": 313,
+        "layer1": 180,
+        "layer2": 7
+      },
+      "baseline_score": 1.0,
+      "baseline_invalid_or_timeout": 0,
+      "baseline_p95_ms": 26.67070005554706,
+      "offline_fallback": {
+        "decision": "confirm",
+        "risk_level": "medium",
+        "risk_category": "sensitive_action",
+        "pipeline_layer": "layer1"
+      }
+    },
+    "compose_config": {
+      "version": "2.39.4",
+      "validated": [
+        "isolated ML check",
+        "LLM override on the working tree",
+        "LLM override on the cached origin/main Compose"
+      ]
     }
   },
   "environment": {
-    "tested_python": "3.13.5",
+    "tested_python": "3.14.0",
     "target_local_python": "3.14",
-    "python_3_14": "not_verified",
-    "docker_build": "not_run_docker_cli_unavailable",
+    "python_3_14": "verified",
+    "docker_build": "pending_team_docker_host",
     "external_llm_api": "not_used",
-    "layer2_default": "disabled"
+    "layer2_default": "disabled",
+    "live_llama_inference": "verified",
+    "layer2_runtime": "llama.cpp 1.0.0-dev (build 0), Windows AMD64, CUDA",
+    "optional_llama_compose": "AI-Guard/docker-compose.llm.yml",
+    "gguf_file": "Qwen3.8-9B-Q4_K_M.gguf",
+    "gguf_sha256": "df13d66021cef676f82be74053220fd75af6bf2a6a7fb77f5222ab9e50744a7a",
+    "gpu": "NVIDIA GeForce RTX 2060 12 GB"
   },
   "policy_notes": {
     "official_security_policy_unchanged": true,
     "local_compatibility_extension": "compatibility.nonprod_resource_patterns: [\"feature-*\"]",
-    "reason": "Three public examples label feature-1423 as non-production although official resource prefixes omit feature-*."
+    "reason": "Three public examples label feature-1423 as non-production although official resource prefixes omit feature-*.",
+    "health_model_loaded_semantics": "model_loaded continues to describe the sklearn classifier; llm_enabled and llm_available are separate fields.",
+    "layer2_fallback": "When LLM_ENABLED=true and Layer 1 confidence is below LLM_MIN_CONFIDENCE, unavailable or invalid Layer 2 output results in confirm."
   },
   "holdout": {
     "file": "evaluation/holdout_v26.jsonl",
@@ -108,25 +163,26 @@
     "policy": "Do not use for tuning; retain for later one-shot verification."
   },
   "sha256": {
-    "VERSION": "732f64d874f90788c0199b0c19bfd9b3b6436e140114e53e462832532d74c61c",
-    "README.md": "eb95776a489a8f8c6b7b833abb6548224728347efaba38aa360ab4cb64a5bd81",
-    "CHANGELOG.md": "0bb3542090b3d253cbcdfebd55f79a463174f4cf42da97940c5a610262311c5d",
-    "RELEASE_NOTES.md": "3e21350d3ed4b7a0447f369bdb8c76917c75785e9a4923dddf8240d586aaf005",
-    "Dockerfile": "e33fbed01ee70af7fe4caf7d8e91f0a4fd1975ac0e44caf5a550c7bcb213cb80",
+    "VERSION": "dcd61275faf6e252973cc588d49645de35ca1dcb226d8bc9bd2184e9b05d169a",
+    "README.md": "1650ff62eaab01fbcbcee0926b5d1864f6a4415f53b8d93f7f4d0d586a49eff7",
+    "CHANGELOG.md": "91307c4add4d00b5fe009cfc0746c782cc3cfd926e02d63dfa978d2357bfae27",
+    "RELEASE_NOTES.md": "35905f2b646abee7c437b2e8fa62d30c0a854c3ea2efce574e868893982a9237",
+    "Dockerfile": "ffb94d8dce5f917452a819e72900866ba58968a0496b2825d52eaf591447a108",
     "requirements.txt": "6d2f229248c4f9a60c9ac4a44831cf4711cd6bb615ba142285e0713a471ecbe8",
     "requirements-dev.txt": "ebc319f05921f7d8d196fb93e7e47ffabc2cdda3dbd7e261d76a8fbc5ea099c8",
-    "app/main.py": "8881270075fd66c7e4328dfc1c50ee9653e7e15b66ce00c1b0615167e72b5c9d",
-    "app/config.py": "cbf992bbfc4ff98d6f9ac682dba4e02a1add163c74d74c610239aa19642e6c39",
+    ".env.example": "5bde703a7179c476dd8e2d67d3bdeb40c82604810fff708851a8b1f6825f65a2",
+    "app/main.py": "6caff0c068b747d1fcdc14dd33d0f643f3a3f8e5ff74b748c0ebb000522cc712",
+    "app/config.py": "66daf0f7cf2b0cdb11de7c02b4087d8a262da88c3408c4a97540ef8856f3e01a",
     "app/schemas.py": "4f87bc3a0c593a77cc3d4edfa11066e1936efe6411856256df6979dee6a46e10",
-    "app/pipeline/engine.py": "d068181cbcbd85da9b9bbe4fbf5715f58dc84b194a03e37eb24beef0dd5e08e8",
-    "app/pipeline/intent.py": "c74622aeeb4b0977a1d613c6f810dcc181c0f551269dfbe8c01e58d537afaa4e",
+    "app/pipeline/engine.py": "e78fcba7be9365ce195d503eaab5598c6ae0a0a3568c0b7a6d9e29e96d32f5b9",
+    "app/pipeline/intent.py": "c5a7fa39fc71246b20e36a891cd92dcedc8c723f63d9a0ece092c8cc115fd2d4",
     "app/pipeline/context_analyzer.py": "ecaaee4a6fb2298e07ed827bc60fe2d65325efe447143e8276a61df266554d85",
     "app/pipeline/layer0_rules.py": "eb3af8e49c54ae05b62cf17b436033b78ee9743c6b50b4474024f4f65577dfe6",
-    "app/pipeline/layer1_classifier.py": "8bc221b7e0fea7b813c5c121c43b8e37ae71763c2865db5e7f74e82106541c89",
-    "app/pipeline/layer2_llm.py": "dc510235580d85c862228aae280d93081320a52126a260647226314e6553f8ef",
+    "app/pipeline/layer1_classifier.py": "ce6267ee5f0712ce3a4bb00a9d3315c4040f7963bdabe8e01bb9aeb8826dac44",
+    "app/pipeline/layer2_llm.py": "74e26afee7d12e03bc88a37c8a0885d56a8f90f03f861aae625d11b9abb94e79",
     "app/utils/normalizer.py": "8e10f415e22d8961ef10298c343fda29db49a924e0ba545ddbe986fa2b039021",
     "app/utils/policy_loader.py": "707c929913c5178ff163c4748a00d73116a4b5247fe752acdfee8a7ff5df9cb7",
-    "app/routers/check.py": "ad4ebd41c2bcb44aabab81c4197d2988dc9f9b23fdbd11fbecac8d30a152c79a",
+    "app/routers/check.py": "1dbded8ceb599cbf6368a55ab9b3938fd814cba0f0ae74fc0a97d0b3c214c272",
     "app/routers/internal.py": "eb1ed672a9a576c98cd826e0e620dd3c5e529b807da0f58c08350e8825b9710e",
     "models/guard_model.joblib": "4d84b46636c6010b0635e2e2099c19943a4397465a3d6f791880f9b56cc85b53",
     "models/training_metadata.json": "567a63233adf3a3bf63f7b7e62920a329981987c8b57aaa023221eb0c57c618b",
@@ -139,18 +195,17 @@
     "astra_public_v2/TRAINING.md": "c42b591e2fc0e6e3527ea448a48af924fb45effc3605b92d59608d38ee859acf",
     "data/augmentation_v25.jsonl": "fd3931896b0e4e165ec079f52534419043f4c3435ce5e3d97c5ed7a94cac7856",
     "data/challenge_v26_dev.jsonl": "2d34236a7571b4cd733466458eaa9c494a975c438d0396c46c1e20462e989ab0",
-    "tests/data/challenge_v24.jsonl": "3ccf2e26cce40c3b59f99e16749ea7ee9c87d753a24322dbbf215a6bba4f855d",
-    "evaluation/README.md": "5b906284f9a3aece5371042cfb06a5b48b411b3062a72eafaeef3874ca8b95f8",
+    "tests/test_layer2_llm.py": "5d5a47a8d82aceae81bfad252e909bee2415fec9ed691070a2ae4ea18850861d",
+    "tests/test_layer2_integration.py": "e45bb764a9ec4b3bc9f11e7c617ca204db064f0b1b8462fe801458f59865e96a",
+    "docs/tasks-ai.md": "6b76508646305e9bb309ec51318c93f213cbe4c397c5ae570a650bcd473cbedc",
+    "reports/official_evaluator_v26.json": "f9e3f6ed00ed4682d51c5bf14412ff8ce3f1ed5af60258e1945c1cde5b1efe35",
+    "reports/official_evaluator_v26_predictions.jsonl": "6ce956900f7ec2db7b1a953c0edee4e214db2ef9083c1cfdff7833c83772fecf",
+    "reports/pytest_v26.xml": "7a0cc8c086847f42f20adc4e263a4c101110757f46d146962989f9a3eb9989f8",
     "evaluation/holdout_v26.jsonl": "f7d91f76a8c1956f6b4763519e43ab44c47f271d2d602ffcd7b88b543b8a789d",
     "evaluation/holdout_v26_report.json": "2d7be7d18b894b463b40d18a584dbca0afa4ea19fce4899c619d1a3de65b1a75",
     "evaluation/holdout_v26_predictions.jsonl": "09fc8859a9fcdef31425f5c91ee8d5b109d1f8f9de7efdd42fd5f0b89cfc41f1",
-    "reports/release_v25_official.json": "e1daddf910f401b48213cb5a534e20011fb29e692ee69060d6132c102df5b7a4",
-    "reports/release_v25_official_predictions.jsonl": "73f556060628651e2b7e656ee1baabcd084dd134f4911b6cbf6e14bb0bc33436",
-    "reports/release_v25_challenge_dev.json": "d82a4d073cd0358eb37aaf305b43a5fbcac8f7d6d47d25a1fb6594938fe992b4",
-    "reports/release_v25_challenge_dev_predictions.jsonl": "2cf9a6ae8d8de1fea9186e1d3cbd9eba1c74a41a332a51d4de40060861bd43c8",
-    "reports/grouped_validation_oof_v25.json": "b7104d162331352ee749afe07a54b192387a8e5a57475de23f655d84a196ffd9",
-    "reports/grouped_validation_oof_predictions_v25.jsonl": "766b663b90515c9ba7fdcced1ed37d664e89bd256517de957d6da183fea84326",
-    "reports/model_card_v25.md": "de24e5e822714b5ee16e4d4152c85061b5be767fbeaff7c6d404cf2fd02a1ad3",
-    "reports/pytest_v25.xml": "f6520bbfd19e7dbe8215c91e657fdf1f639def4b1b549cb84c57f49b5b8c281d"
+    "scripts/verify_ml.py": "967e9cb3822155ec5decc7111982cac240b14a2e416d55245be4dca206644219",
+    "compose.verify.yml": "a7d4a25d585dba404b94f4ace9b59efaa01d560c96edf02f1edea4fb05bb47b5",
+    "reports/verification_live.json": "68d08a03ab9611f6ad941e52aa9506fadb2ca86f68de4c5e05342af5b139f3ac"
   }
 }

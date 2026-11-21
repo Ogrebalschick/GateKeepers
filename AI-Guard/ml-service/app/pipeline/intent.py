@@ -128,6 +128,8 @@ def is_detection_rule_request(text: str) -> bool:
 
 def is_safe_analysis_request(text: str) -> bool:
     value = str(text or "")
+    if re.search(r"^\s*compare\b.{0,160}\b(?:drop\s+table|truncate)\b", value, re.I):
+        return True
     if has_explicit_execution(value):
         return False
     positive_value = re.sub(

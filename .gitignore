@@ -1,1 +1,4 @@
 .env
+
+# Local LLM weights are not stored in Git
+AI-Guard/models/*.gguf

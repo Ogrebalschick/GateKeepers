@@ -1,0 +1,26 @@
+name: astra-guard-ml-check
+
+services:
+  ml-service:
+    build: .
+    environment:
+      LLM_ENABLED: "false"
+      BACKEND_URL: ""
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=3).close()"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  verify:
+    image: python:3.11-slim
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    working_dir: /verify
+    volumes:
+      - ./scripts/verify_ml.py:/verify/scripts/verify_ml.py:ro
+      - ./astra_public_v2:/verify/astra_public_v2:ro
+      - ./reports:/verify/reports
+    command: ["python", "scripts/verify_ml.py", "--url", "http://ml-service:8000", "--report", "reports/docker_ml.json"]

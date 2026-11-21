@@ -6,7 +6,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MODEL_PATH=/app/models/guard_model.joblib \
     BACKEND_URL= \
     LLAMA_URL=http://llama:8080 \
-    LLM_ENABLED=false
+    LLM_ENABLED=false \
+    LLM_MIN_CONFIDENCE=0.85 \
+    LLM_TIMEOUT_SECONDS=8.0 \
+    LLM_HEALTH_TIMEOUT_SECONDS=1.0
 
 WORKDIR /app
 

@@ -7,7 +7,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.config import LLM_ENABLED
 from app.pipeline.layer1_classifier import is_classifier_loaded, load_classifier, predict
+from app.pipeline.layer2_llm import is_llm_available
 from app.routers.check import router as check_router
 from app.routers.internal import router as internal_router
 from app.utils.policy_loader import get_version, load_policy
@@ -45,7 +47,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Astra Guard ML Service", version="2.5.0", lifespan=lifespan)
+app = FastAPI(title="Astra Guard ML Service", version="2.6.0-rc1", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -61,12 +63,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 @app.get("/health")
-async def health():
+def health():
     return {
         "status": "ok",
         "version": app.version,
         "model_loaded": is_classifier_loaded(),
         "model_warmed_up": model_warmed_up,
+        "llm_enabled": LLM_ENABLED,
+        "llm_available": is_llm_available() if LLM_ENABLED else False,
         "policy_version": get_version(),
     }
 

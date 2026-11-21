@@ -1,14 +1,14 @@
 from typing import Any
 import re
 
-from app.config import ALLOW_BLOCK_MARGIN, ALLOW_MIN_CONFIDENCE, BLOCK_MIN_CONFIDENCE, LLM_ENABLED, RISK_LEVEL_MIN_CONFIDENCE
+from app.config import (ALLOW_BLOCK_MARGIN, ALLOW_MIN_CONFIDENCE, BLOCK_MIN_CONFIDENCE, LLM_ENABLED, LLM_MIN_CONFIDENCE, RISK_LEVEL_MIN_CONFIDENCE)
 from app.pipeline.layer0_rules import (
     RuleResult, check_always_block, check_rbac, _risk_for_category, _PATTERNS,
     _ATTACHMENT_DIRECTIVE, _FORBIDDEN_ACTIONS, _CRITICAL_TOOL_PATTERNS,
     _SECRET_VALUE, _SECRET_ACCESS_REQUEST,
 )
 from app.pipeline.layer1_classifier import predict
-from app.pipeline.layer2_llm import classify_with_llm
+from app.pipeline.layer2_llm import classify_with_llm, is_llm_available
 from app.pipeline.context_analyzer import prepare_analysis_context
 
 
@@ -187,15 +187,26 @@ def evaluate_request(user_prompt: str, context: dict[str, Any]) -> tuple[RuleRes
         ), "layer0"
 
     prediction = predict(user_prompt, analysis_context, prompt_for_analysis)
-    if prediction:
+    prediction_confidence = float(prediction.get("decision_confidence", 0.0)) if prediction else 0.0
+
+    # When Layer 2 is enabled, uncertain Layer 1 predictions are escalated to the
+    # local LLM. With Layer 2 disabled, preserve the established 2.5 behaviour.
+    if prediction and (not LLM_ENABLED or prediction_confidence >= LLM_MIN_CONFIDENCE):
         result = _model_result(prediction, user_prompt, full_analysis_text)
         if result:
             return result, "layer1"
 
-    if LLM_ENABLED:
+    if LLM_ENABLED and is_llm_available():
         llm_result = classify_with_llm(user_prompt, analysis_context, full_analysis_text)
         if llm_result:
-            return RuleResult(llm_result["decision"], llm_result["risk_category"], llm_result["risk_level"], llm_result["explanation"]), "layer2"
+            decision, risk_level, risk_category, explanation = llm_result
+            return RuleResult(decision, risk_category, risk_level, explanation), "layer2"
 
-    return RuleResult("confirm", "sensitive_action", "medium",
-                      "Не удалось уверенно классифицировать запрос; требуется явное подтверждение, автоматическая передача не выполняется."), "layer1" if prediction else "layer0"
+    # Fail closed if the classifier is uncertain and the optional local LLM
+    # cannot be reached or does not return a valid classification.
+    return RuleResult(
+        "confirm",
+        "sensitive_action",
+        "medium",
+        "Не удалось уверенно классифицировать запрос; требуется явное подтверждение, автоматическая передача не выполняется.",
+    ), "layer1" if prediction else "layer0"

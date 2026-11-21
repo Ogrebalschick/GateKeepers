@@ -70,7 +70,7 @@ async def _send_backend_log(payload: dict) -> None:
 
 
 @router.post("/v1/check", response_model=CheckResponse)
-async def check(request: CheckRequest, background_tasks: BackgroundTasks):
+def check(request: CheckRequest, background_tasks: BackgroundTasks):
     started = time.perf_counter()
     if len(request.user_prompt) > MAX_INPUT_CHARS:
         return JSONResponse(status_code=400, content={"error": "invalid_input", "detail": f"user_prompt exceeds {MAX_INPUT_CHARS} characters"})

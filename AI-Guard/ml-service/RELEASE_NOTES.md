@@ -1,33 +1,35 @@
-# Astra Guard 2.5.0 — release notes
+# Astra Guard 2.6.0-rc1 — release notes
 
 ## Состав релиза
 
-Обновлённый ML-service с исправленным анализом истории, расширенным обнаружением indirect injection, более точной обработкой system prompt override / privilege escalation, безопасным режимом просмотра имён секретов и YAML-driven совместимостью с публичными примерами `feature-*`.
+- Layer 0 и Layer 1 из текущей интегрированной версии 2.5.0.
+- Клиент llama.cpp использует `/health`, `/tokenize` и `/completion`. Ошибка установления соединения допускает одну повторную попытку.
+- Промпт содержит до 500 символов кейса и укладывается в 800 токенов перед генерацией. Модель выдаёт решение по JSON-схеме.
+- Переход Layer 1 → Layer 2 при confidence ниже 0.85, если LLM включена.
+- Fail-closed fallback: `confirm` при недоступности или невалидном ответе LLM.
+- Дополнительные поля `/health`: `llm_enabled`, `llm_available`.
+- Опциональный `AI-Guard/docker-compose.llm.yml`.
+- 20 новых тестов Layer 2 и интеграции.
 
-## Подтверждённые проверки
+## Проверки
 
-- 184 unit/API/regression tests passed.
-- Официальные тесты evaluator: 5 passed.
-- Official evaluator v2.0: 500 ответов, 70/70 автоматических баллов, Score 1.000, 0 ошибок/таймаутов, p95 15.94 ms.
-- Challenge v26 dev: 91/91 по решению и категории, p95 7.92 ms. Набор использовался при разработке, не является слепой оценкой.
-- Grouped 5-fold OOF: full pipeline accuracy 100%, macro-F1 100%, BCS 1.000; ML-only accuracy 92.0%, macro-F1 86.77%, BCS 95.61%, strict High/Critical block recall 93.37%, category accuracy 77.5%.
-- Модель обучена на 500 официальных и 384 синтетических строках. Оригинальные `dev.jsonl`, `dev.csv`, `security_policy.yaml`, `evaluate.py` и `test_evaluate.py` не изменены.
+- Под Python 3.14.0 прошли 211 тестов, включая 27 тестов HTTP-клиента и маршрутизации Layer 2.
+- На RTX 2060 локальная GGUF-модель обработала 7 публичных запросов и 3 отдельных примера с решениями `allow`, `confirm` и `block`. На публичном наборе получено 500/500, 70/70, p95 28,09 мс. [Отчёт](reports/verification_live.json)
+- `LLM_ENABLED=false` сохраняет текущий маршрут L0 → L1 и не меняет публичный evaluator.
+- При `LLM_ENABLED=true` confidence Layer 1 ниже 0.85 вызывает health check и при доступности — llama.cpp completion.
 
-## Независимый one-shot holdout
+## Ограничения релиз-кандидата
 
-Отдельный набор из 87 сценариев, созданный после заморозки кода и не использованный для обучения/настройки:
+- В переданном архиве нет GGUF-файла. Реальная модель должна быть предоставлена отдельно и указана через `LLAMA_MODEL_PATH`.
+- Docker Compose 2.39.4 проверил ML-конфигурацию для локального и командного вариантов стека. Сборка и запуск образа ожидают Docker-хоста команды. Из `AI-Guard/ml-service` выполнить `docker compose -f compose.verify.yml up --build --exit-code-from verify`.
+- Результаты публичного evaluator не доказывают качество на закрытом наборе организаторов.
 
-- Balanced Cost Score: 0.9162 (64.14/70).
-- High/Critical strict block recall: 92.31%; containment recall: 100%.
-- Hard-negative block rate: 16.67%; unnecessary confirmation rate: 6.67%.
-- Risk-category accuracy: 79.31%; p95: 6.65 ms; 0 invalid/timeout.
+## Включение Layer 2
 
-Это выявило разрыв обобщения. Набор не использовался для исправления ошибок и должен оставаться контрольным holdout.
+Скопируйте `AI-Guard/.env.example` в `AI-Guard/.env`, укажите путь к GGUF-модели и выполните из `AI-Guard`:
 
-## Важные оговорки
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.llm.yml up --build
+```
 
-Публичный evaluator и challenge dev-набор не являются независимыми blind holdout-оценками. Full-pipeline OOF может быть оптимистичным, так как правила Layer 0 дорабатывались с учётом публичных данных. Качество на закрытом наборе организаторов неизвестно.
-
-Сборка является release candidate, а не окончательно подтверждённым релизом. Она проверена на Python 3.13.5. Python 3.14 и Docker build в этой среде не проверены. CPU-only timing отмечен evaluator как кандидат на бонус; аппаратную конфигурацию и бонус подтверждают организаторы.
-
-В локальном `policy.yaml` есть явно обозначенное расширение `compatibility.nonprod_resource_patterns: ["feature-*"]` для трёх публичных примеров. Оригинальная официальная YAML-политика сохранена без изменений.
+По умолчанию Layer 2 выключен. Для его включения используется override compose, который задаёт `LLM_ENABLED=true` и подключает llama.cpp server.
