@@ -21,11 +21,11 @@ export default function App() {
 
           {/* Все страницы — внутри Layout */}
           <Route element={<Layout />}>
-            <Route path="/"          element={<CheckPage />}     />
+            <Route path="/" element={<CheckPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/logs"      element={<LogsPage />}      />
-            <Route path="/policy"    element={<PolicyPage />}    />
-            <Route path="/sessions"  element={<SessionsPage />}  />
+            <Route path="/logs" element={<LogsPage />} />
+            <Route path="/policy" element={<PolicyPage />} />
+            <Route path="/sessions" element={<SessionsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

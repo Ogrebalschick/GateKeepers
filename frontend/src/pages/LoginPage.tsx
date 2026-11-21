@@ -31,8 +31,7 @@ export default function LoginPage() {
       const redirect = searchParams.get('redirect') ?? '/';
       navigate(redirect, { replace: true });
     } catch (err: unknown) {
-      const status =
-        (err as { response?: { status?: number } })?.response?.status;
+      const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401) {
         toast.error('Неверный логин или пароль');
       } else {
@@ -48,7 +47,6 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* ── Card ── */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
-
           {/* Logo + Title */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-3">

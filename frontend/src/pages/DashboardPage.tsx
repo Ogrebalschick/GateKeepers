@@ -1,11 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  Activity,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  ShieldX,
-} from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Clock, ShieldX } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -112,10 +106,7 @@ export default function DashboardPage() {
     refetchInterval: 30_000,
   });
 
-  const {
-    data: timeline,
-    isLoading: timelineLoading,
-  } = useQuery<{ items: TimelineItem[] }>({
+  const { data: timeline, isLoading: timelineLoading } = useQuery<{ items: TimelineItem[] }>({
     queryKey: ['timeline'],
     queryFn: () => getTimeline(24),
     refetchInterval: 30_000,
@@ -124,9 +115,9 @@ export default function DashboardPage() {
   // Prepare chart data
   const chartData = (timeline?.items ?? []).map((item) => ({
     hour: fmtHour(item.hour),
-    'Разрешено': item.allow,
-    'Подтвердить': item.confirm,
-    'Заблокировано': item.block,
+    Разрешено: item.allow,
+    Подтвердить: item.confirm,
+    Заблокировано: item.block,
   }));
 
   // Top categories sorted by count
@@ -139,9 +130,7 @@ export default function DashboardPage() {
       {/* ── Page title ───────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Дашборд</h1>
-        <p className="text-gray-500 text-sm mt-0.5">
-          Статистика обновляется каждые 30 секунд
-        </p>
+        <p className="text-gray-500 text-sm mt-0.5">Статистика обновляется каждые 30 секунд</p>
       </div>
 
       {/* ── Stat cards ───────────────────────────────────────────────────── */}
@@ -191,7 +180,6 @@ export default function DashboardPage() {
 
       {/* ── Bottom grid: chart + table ────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
         {/* Timeline bar chart */}
         <div className="xl:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-base font-semibold text-gray-800 mb-4">
@@ -231,8 +219,8 @@ export default function DashboardPage() {
                   iconSize={8}
                   wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
                 />
-                <Bar dataKey="Разрешено"    fill="#22c55e" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Подтвердить"  fill="#eab308" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Разрешено" fill="#22c55e" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Подтвердить" fill="#eab308" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="Заблокировано" fill="#ef4444" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

@@ -39,12 +39,7 @@ import type {
 // Storage & utilities
 // =============================================================================
 
-const GUARD_KEYS = [
-  'guard_token',
-  'guard_user_id',
-  'guard_role',
-  'guard_username',
-] as const;
+const GUARD_KEYS = ['guard_token', 'guard_user_id', 'guard_role', 'guard_username'] as const;
 
 /** Returns Authorization header object, or {} when not logged in. */
 export function getAuthHeaders(): Record<string, string> {
@@ -131,9 +126,9 @@ const DEMO_CREDENTIALS: Record<
   string,
   { password: string; role: LoginResponse['role']; user_id: string }
 > = {
-  admin:    { password: 'demo_admin_2026', role: 'admin',     user_id: 'usr_admin_001' },
-  sre_user: { password: 'demo_sre_2026',   role: 'sre',       user_id: 'usr_sre_002'   },
-  dev_user: { password: 'demo_dev_2026',   role: 'developer', user_id: 'usr_dev_003'   },
+  admin: { password: 'demo_admin_2026', role: 'admin', user_id: 'usr_admin_001' },
+  sre_user: { password: 'demo_sre_2026', role: 'sre', user_id: 'usr_sre_002' },
+  dev_user: { password: 'demo_dev_2026', role: 'developer', user_id: 'usr_dev_003' },
 };
 
 // ─── Mock logs ────────────────────────────────────────────────────────────────
@@ -168,7 +163,8 @@ const MOCK_LOGS: LogItem[] = [
     decision: 'confirm',
     risk_level: 'medium',
     risk_category: 'sensitive_action',
-    explanation: 'Admin requests restart of a production service. Requires explicit confirmation per policy.',
+    explanation:
+      'Admin requests restart of a production service. Requires explicit confirmation per policy.',
     latency_ms: 12.3,
     pipeline_layer: 'layer0',
     has_attachments: false,
@@ -398,10 +394,9 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
       payload.user_prompt,
     );
 
-  const needsConfirm =
-    /restart|reboot|shutdown|scale down|delete.*prod|drop.*table|rm -rf/i.test(
-      payload.user_prompt,
-    );
+  const needsConfirm = /restart|reboot|shutdown|scale down|delete.*prod|drop.*table|rm -rf/i.test(
+    payload.user_prompt,
+  );
 
   const response: CheckResponse = isBlocked
     ? {
@@ -414,24 +409,25 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
         pipeline_layer: 'layer0',
       }
     : needsConfirm
-    ? {
-        check_id: crypto.randomUUID(),
-        decision: 'confirm',
-        risk_level: 'medium',
-        risk_category: 'sensitive_action',
-        explanation: 'Action targets a production system and requires explicit confirmation per policy.',
-        latency_ms: 11.2,
-        pipeline_layer: 'layer0',
-      }
-    : {
-        check_id: crypto.randomUUID(),
-        decision: 'allow',
-        risk_level: 'none',
-        risk_category: 'none',
-        explanation: 'No policy violations detected.',
-        latency_ms: 3.1,
-        pipeline_layer: 'layer0',
-      };
+      ? {
+          check_id: crypto.randomUUID(),
+          decision: 'confirm',
+          risk_level: 'medium',
+          risk_category: 'sensitive_action',
+          explanation:
+            'Action targets a production system and requires explicit confirmation per policy.',
+          latency_ms: 11.2,
+          pipeline_layer: 'layer0',
+        }
+      : {
+          check_id: crypto.randomUUID(),
+          decision: 'allow',
+          risk_level: 'none',
+          risk_category: 'none',
+          explanation: 'No policy violations detected.',
+          latency_ms: 3.1,
+          pipeline_layer: 'layer0',
+        };
 
   return mockDelay(400, response);
 }
@@ -444,26 +440,26 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
 export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
   requireAuth();
 
-  const role   = localStorage.getItem('guard_role');
+  const role = localStorage.getItem('guard_role');
   const userId = localStorage.getItem('guard_user_id');
 
   let items = [...MOCK_LOGS];
   if (role === 'developer') items = items.filter((l) => l.user_id === userId);
 
-  if (params?.decision)      items = items.filter((l) => l.decision === params.decision);
-  if (params?.risk_level)    items = items.filter((l) => l.risk_level === params.risk_level);
+  if (params?.decision) items = items.filter((l) => l.decision === params.decision);
+  if (params?.risk_level) items = items.filter((l) => l.risk_level === params.risk_level);
   if (params?.risk_category) items = items.filter((l) => l.risk_category === params.risk_category);
-  if (params?.user_id)       items = items.filter((l) => l.user_id === params.user_id);
+  if (params?.user_id) items = items.filter((l) => l.user_id === params.user_id);
   if (params?.search) {
     const q = params.search.toLowerCase();
     items = items.filter((l) => l.user_prompt.toLowerCase().includes(q));
   }
 
-  const page    = params?.page ?? 1;
+  const page = params?.page ?? 1;
   const perPage = params?.per_page ?? 50;
-  const total   = items.length;
-  const pages   = Math.max(1, Math.ceil(total / perPage));
-  const start   = (page - 1) * perPage;
+  const total = items.length;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const start = (page - 1) * perPage;
 
   return mockDelay(300, {
     items: items.slice(start, start + perPage),
@@ -528,21 +524,36 @@ export function exportLogs(params?: Omit<LogsParams, 'page' | 'per_page'>): void
   requireAuth();
   // Mock: build a CSV from MOCK_LOGS and trigger download
   const headers = [
-    'id', 'check_id', 'created_at', 'user_name', 'user_role',
-    'decision', 'risk_level', 'risk_category', 'latency_ms', 'user_prompt',
+    'id',
+    'check_id',
+    'created_at',
+    'user_name',
+    'user_role',
+    'decision',
+    'risk_level',
+    'risk_category',
+    'latency_ms',
+    'user_prompt',
   ].join(',');
   const rows = MOCK_LOGS.map((l) =>
     [
-      l.id, l.check_id, l.created_at, l.user_name, l.user_role,
-      l.decision, l.risk_level, l.risk_category, l.latency_ms,
+      l.id,
+      l.check_id,
+      l.created_at,
+      l.user_name,
+      l.user_role,
+      l.decision,
+      l.risk_level,
+      l.risk_category,
+      l.latency_ms,
       `"${l.user_prompt.replace(/"/g, '""')}"`,
     ].join(','),
   );
   const csv = [headers, ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
   a.download = `guard_logs_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
@@ -567,18 +578,18 @@ export async function getPolicy(): Promise<PolicyVersion> {
 export async function updatePolicy(data: PolicyUpdateRequest): Promise<PolicyUpdateResponse> {
   requireAuth();
 
-  MOCK_POLICY.version    += 1;
+  MOCK_POLICY.version += 1;
   MOCK_POLICY.content_yaml = data.content_yaml;
-  MOCK_POLICY.updated_at   = new Date().toISOString();
-  MOCK_POLICY.updated_by   = data.updated_by;
-  MOCK_POLICY.comment      = data.comment;
+  MOCK_POLICY.updated_at = new Date().toISOString();
+  MOCK_POLICY.updated_by = data.updated_by;
+  MOCK_POLICY.comment = data.comment;
 
   return mockDelay(400, {
-    version:      MOCK_POLICY.version,
+    version: MOCK_POLICY.version,
     content_yaml: MOCK_POLICY.content_yaml,
-    updated_at:   MOCK_POLICY.updated_at,
-    updated_by:   MOCK_POLICY.updated_by,
-    comment:      MOCK_POLICY.comment,
+    updated_at: MOCK_POLICY.updated_at,
+    updated_by: MOCK_POLICY.updated_by,
+    comment: MOCK_POLICY.comment,
     reload_status: 'ok' as const,
   });
 }
@@ -593,21 +604,21 @@ export async function getPolicyHistory(): Promise<PolicyHistoryResponse> {
 
   const items: PolicyHistoryResponse['items'] = [
     {
-      version:    1,
+      version: 1,
       updated_at: '2026-11-20T18:00:00Z',
       updated_by: 'admin',
-      comment:    'Initial policy version',
-      is_active:  MOCK_POLICY.version === 1,
+      comment: 'Initial policy version',
+      is_active: MOCK_POLICY.version === 1,
     },
   ];
 
   if (MOCK_POLICY.version > 1) {
     items.push({
-      version:    MOCK_POLICY.version,
+      version: MOCK_POLICY.version,
       updated_at: MOCK_POLICY.updated_at,
       updated_by: MOCK_POLICY.updated_by,
-      comment:    MOCK_POLICY.comment,
-      is_active:  true,
+      comment: MOCK_POLICY.comment,
+      is_active: true,
     });
   }
 
@@ -623,10 +634,10 @@ export async function confirmAction(data: ConfirmRequest): Promise<ConfirmRespon
   requireAuth();
 
   return mockDelay(300, {
-    check_id:       data.check_id,
-    user_decision:  data.user_decision,
-    confirmed_at:   new Date().toISOString(),
-    confirmed_by:   data.user_id,
+    check_id: data.check_id,
+    user_decision: data.user_decision,
+    confirmed_at: new Date().toISOString(),
+    confirmed_by: data.user_id,
   });
 }
 
@@ -639,15 +650,15 @@ export async function createSession(data: SessionCreateRequest): Promise<Session
   requireAuth();
 
   const session: Session = {
-    session_id:       crypto.randomUUID(),
-    created_at:       new Date().toISOString(),
-    user_id:          data.user_id,
-    user_role:        data.user_role,
-    max_requests:     data.max_requests ?? 100,
-    request_count:    0,
-    status:           'active',
+    session_id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    user_id: data.user_id,
+    user_role: data.user_role,
+    max_requests: data.max_requests ?? 100,
+    request_count: 0,
+    status: 'active',
     last_activity_at: new Date().toISOString(),
-    threat_flags:     [],
+    threat_flags: [],
   };
 
   MOCK_SESSIONS.push(session);
@@ -662,18 +673,18 @@ export async function createSession(data: SessionCreateRequest): Promise<Session
 export async function getSessions(params?: SessionsParams): Promise<SessionsResponse> {
   requireAuth();
 
-  const role   = localStorage.getItem('guard_role');
+  const role = localStorage.getItem('guard_role');
   const userId = localStorage.getItem('guard_user_id');
 
   let items = [...MOCK_SESSIONS];
   if (role === 'developer') items = items.filter((s) => s.user_id === userId);
-  if (params?.status)  items = items.filter((s) => s.status === params.status);
+  if (params?.status) items = items.filter((s) => s.status === params.status);
   if (params?.user_id) items = items.filter((s) => s.user_id === params.user_id);
 
-  const page    = params?.page ?? 1;
+  const page = params?.page ?? 1;
   const perPage = params?.per_page ?? 20;
-  const total   = items.length;
-  const start   = (page - 1) * perPage;
+  const total = items.length;
+  const start = (page - 1) * perPage;
 
   return mockDelay(300, {
     items: items.slice(start, start + perPage),
@@ -700,20 +711,18 @@ export async function getSessionById(id: string): Promise<SessionDetail> {
     );
   }
 
-  const messages = MOCK_LOGS
-    .filter((l) => l.session_id === id)
-    .map((l, idx) => ({
-      id:                   idx + 1,
-      check_id:             l.check_id,
-      created_at:           l.created_at,
-      user_prompt:          l.user_prompt.slice(0, 300),
-      decision:             l.decision,
-      risk_level:           l.risk_level,
-      risk_category:        l.risk_category,
-      explanation:          l.explanation,
-      latency_ms:           l.latency_ms,
-      is_multi_step_attack: false,
-    }));
+  const messages = MOCK_LOGS.filter((l) => l.session_id === id).map((l, idx) => ({
+    id: idx + 1,
+    check_id: l.check_id,
+    created_at: l.created_at,
+    user_prompt: l.user_prompt.slice(0, 300),
+    decision: l.decision,
+    risk_level: l.risk_level,
+    risk_category: l.risk_category,
+    explanation: l.explanation,
+    latency_ms: l.latency_ms,
+    is_multi_step_attack: false,
+  }));
 
   return mockDelay(300, { ...session, messages });
 }
@@ -731,15 +740,15 @@ export async function getStats(): Promise<StatsResponse> {
     by_decision: { allow: 2, confirm: 2, block: 3 },
     by_risk_level: { none: 1, low: 1, medium: 2, high: 2, critical: 1 },
     top_categories: [
-      { category: 'jailbreak',               count: 2 },
-      { category: 'sensitive_action',         count: 2 },
-      { category: 'data_exfiltration',        count: 1 },
+      { category: 'jailbreak', count: 2 },
+      { category: 'sensitive_action', count: 2 },
+      { category: 'data_exfiltration', count: 1 },
       { category: 'system_prompt_extraction', count: 1 },
-      { category: 'none',                     count: 1 },
+      { category: 'none', count: 1 },
     ],
-    latency_p50_ms:   8.1,
-    latency_p95_ms:  12.3,
-    latency_p99_ms:  12.3,
+    latency_p50_ms: 8.1,
+    latency_p95_ms: 12.3,
+    latency_p99_ms: 12.3,
     by_pipeline_layer: { layer0: 5, layer1: 2, layer2: 0 },
     period_hours: 24,
   });
@@ -753,20 +762,20 @@ export async function getStats(): Promise<StatsResponse> {
 export async function getTimeline(hours = 24): Promise<TimelineResponse> {
   requireAuth();
 
-  const now    = new Date();
-  const items  = Array.from({ length: Math.min(hours, 12) }, (_, i) => {
+  const now = new Date();
+  const items = Array.from({ length: Math.min(hours, 12) }, (_, i) => {
     const hour = new Date(now.getTime() - (hours - 1 - i) * 3_600_000);
     hour.setMinutes(0, 0, 0);
-    const allow   = Math.floor(Math.random() * 5);
+    const allow = Math.floor(Math.random() * 5);
     const confirm = Math.floor(Math.random() * 3);
-    const block   = Math.floor(Math.random() * 4);
+    const block = Math.floor(Math.random() * 4);
     return {
-      hour:            hour.toISOString(),
+      hour: hour.toISOString(),
       allow,
       confirm,
       block,
-      total:           allow + confirm + block,
-      avg_latency_ms:  +(Math.random() * 10 + 3).toFixed(1),
+      total: allow + confirm + block,
+      avg_latency_ms: +(Math.random() * 10 + 3).toFixed(1),
     };
   });
 

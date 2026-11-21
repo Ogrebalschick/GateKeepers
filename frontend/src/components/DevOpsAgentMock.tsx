@@ -40,12 +40,8 @@ export default function DevOpsAgentMock({ status, response }: Props) {
           <XCircle className="w-8 h-8 text-red-500 shrink-0" />
           <div>
             <h3 className="text-sm font-semibold text-gray-900">DevOps-ассистент</h3>
-            <p className="mt-2 text-sm font-medium text-red-700">
-              Запрос заблокирован Сторожем
-            </p>
-            <p className="mt-2 text-sm text-gray-600">
-              DevOps-ассистент не получил запрос
-            </p>
+            <p className="mt-2 text-sm font-medium text-red-700">Запрос заблокирован Сторожем</p>
+            <p className="mt-2 text-sm text-gray-600">DevOps-ассистент не получил запрос</p>
           </div>
         </div>
       </div>

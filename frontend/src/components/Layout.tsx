@@ -18,11 +18,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/',          Icon: Search,        label: 'Проверить' },
-  { to: '/dashboard', Icon: BarChart3,     label: 'Дашборд'   },
-  { to: '/logs',      Icon: ClipboardList, label: 'Журнал'    },
-  { to: '/policy',    Icon: Settings,      label: 'Политика'  },
-  { to: '/sessions',  Icon: MessageSquare, label: 'Сессии'    },
+  { to: '/', Icon: Search, label: 'Проверить' },
+  { to: '/dashboard', Icon: BarChart3, label: 'Дашборд' },
+  { to: '/logs', Icon: ClipboardList, label: 'Журнал' },
+  { to: '/policy', Icon: Settings, label: 'Политика' },
+  { to: '/sessions', Icon: MessageSquare, label: 'Сессии' },
 ];
 
 function navClass({ isActive }: { isActive: boolean }) {

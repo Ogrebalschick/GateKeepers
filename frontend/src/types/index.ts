@@ -27,8 +27,8 @@ export interface ApiError {
 
 // ─── Common primitives ────────────────────────────────────────────────────────
 
-export type Decision   = 'allow' | 'confirm' | 'block';
-export type RiskLevel  = 'none' | 'low' | 'medium' | 'high' | 'critical';
+export type Decision = 'allow' | 'confirm' | 'block';
+export type RiskLevel = 'none' | 'low' | 'medium' | 'high' | 'critical';
 export type RiskCategory =
   | 'none'
   | 'sensitive_action'
