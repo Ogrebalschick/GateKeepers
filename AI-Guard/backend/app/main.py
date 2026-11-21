@@ -1,9 +1,12 @@
+# main.py
 import json
 import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from typing import Any
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -17,10 +20,12 @@ from .auth import (
 )
 from .config import get_settings
 from .database import SessionLocal, init_db
-from .db_models import Check, GuardSession, PolicyVersion
-from .detector import analyze
+from .db_models import Check, PolicyVersion
 from .policy import policy_store
 from .schemas import (
+    DECISIONS,
+    RISK_CATEGORIES,
+    RISK_LEVELS,
     CheckRequest,
     CheckResponse,
     ConfirmRequest,
@@ -31,18 +36,31 @@ from .schemas import (
 
 settings = get_settings()
 
+# ---------- ML-клиент ----------
+_http_client: httpx.AsyncClient | None = None
+ML_TIMEOUT = httpx.Timeout(
+    connect=2.0,
+    read=float(getattr(settings, "ML_TIMEOUT_SECONDS", 8.0)),
+    write=2.0,
+    pool=2.0,
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _http_client
+    _http_client = httpx.AsyncClient(timeout=ML_TIMEOUT)
     try:
         await init_db()
-    except Exception as exc:  # БД может быть недоступна — /v1/check всё равно должен работать
+    except Exception as exc:
         print(f"[startup] DB init failed: {exc}")
     try:
         await _bootstrap_policy()
     except Exception as exc:
         print(f"[startup] policy bootstrap failed: {exc}")
     yield
+    if _http_client:
+        await _http_client.aclose()
 
 
 app = FastAPI(title="AstraGuard", version=settings.VERSION, lifespan=lifespan)
@@ -55,7 +73,6 @@ app.add_middleware(
 
 
 async def _bootstrap_policy() -> None:
-    """Кладём текущую политику как v1 в БД, если активной ещё нет."""
     async with SessionLocal() as db:
         existing = await db.scalar(
             select(PolicyVersion).where(PolicyVersion.is_active.is_(True))
@@ -74,25 +91,131 @@ async def _bootstrap_policy() -> None:
         await db.commit()
 
 
-# ---------------------- Health ----------------------
+# ---------- Нормализация ML-ответа под схему CheckResponse ----------
+def _fallback(reason: str, latency_ms: float) -> dict:
+    """Fail-safe: если ML недоступен/вернул мусор — block (пропуск опаснее)."""
+    return {
+        "decision": "block",
+        "risk_level": "high",
+        "risk_category": "none",
+        "explanation": (
+            f"ML-сервис недоступен или вернул некорректный ответ ({reason}). "
+            f"Запрос заблокирован по fail-safe."
+        ),
+        "latency_ms": round(latency_ms, 2),
+        "pipeline_layer": "fallback",
+        "check_id": str(uuid.uuid4()),
+    }
+
+
+def _normalize_ml_response(raw: Any, fallback_latency_ms: float) -> dict:
+    """
+    Приводит ответ ML к контракту CheckResponse.
+    Валидные множества берутся из schemas.py (Literal → get_args).
+    Любое несоответствие → безопасный дефолт, чтобы response_model не упал 500-й.
+    """
+    if not isinstance(raw, dict):
+        return _fallback("ответ ML не является JSON-объектом", fallback_latency_ms)
+
+    decision = str(raw.get("decision", "")).lower().strip()
+    if decision not in DECISIONS:
+        return _fallback(
+            f"неизвестный decision={decision!r}", fallback_latency_ms
+        )
+
+    risk_level = str(raw.get("risk_level", "none")).lower().strip()
+    if risk_level not in RISK_LEVELS:
+        risk_level = "medium"  # безопасный дефолт
+
+    risk_category = str(raw.get("risk_category", "none")).strip()
+    if risk_category not in RISK_CATEGORIES:
+        risk_category = "none"
+
+    explanation = str(raw.get("explanation", "")).strip()
+    if not explanation:
+        explanation = f"Решение ML: {decision}"
+
+    pipeline_layer = str(raw.get("pipeline_layer", "layer0")).strip() or "layer0"
+
+    try:
+        latency_ms = float(raw.get("latency_ms", fallback_latency_ms))
+    except (TypeError, ValueError):
+        latency_ms = fallback_latency_ms
+
+    check_id = str(raw.get("check_id") or uuid.uuid4())
+
+    return {
+        "decision": decision,
+        "risk_level": risk_level,
+        "risk_category": risk_category,
+        "explanation": explanation,
+        "latency_ms": round(latency_ms, 2),
+        "pipeline_layer": pipeline_layer,
+        "check_id": check_id,
+    }
+
+
+# ---------- Health ----------
 @app.get("/health")
 async def health():
+    ml_ok = False
+    try:
+        if _http_client:
+            r = await _http_client.get(
+                f"{settings.ML_SERVICE_URL}/health", timeout=2.0
+            )
+            ml_ok = r.status_code == 200
+    except Exception:
+        pass
     return {
         "status": "ok",
         "version": settings.VERSION,
         "policy_version": policy_store.version,
+        "ml_service_reachable": ml_ok,
     }
 
 
-# ---------------------- /v1/check (CRITICAL) ----------------------
+# ---------- /v1/check — шлюз к ML ----------
 @app.post("/v1/check", response_model=CheckResponse)
 async def check(req: CheckRequest):
     t0 = time.perf_counter()
-    verdict = analyze(req)
-    latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
-    check_id = str(uuid.uuid4())
 
-    # best-effort лог; любая ошибка БД не должна ломать ответ
+    payload = {
+        "user_prompt": req.user_prompt,
+        "context": req.context.model_dump(),
+        "session_id": req.session_id,
+    }
+
+    raw_response: Any = None
+    try:
+        if _http_client is None:
+            raise RuntimeError("http client not initialized")
+        r = await _http_client.post(
+            f"{settings.ML_SERVICE_URL}/v1/check",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        if r.status_code == 200:
+            raw_response = r.json()
+        else:
+            print(f"[check] ML non-200: {r.status_code} {r.text[:200]}")
+    except httpx.TimeoutException:
+        print("[check] ML timeout")
+    except Exception as exc:
+        print(f"[check] ML error: {exc}")
+
+    latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
+
+    if raw_response is None:
+        result = _fallback("нет ответа от ML", latency_ms)
+    else:
+        result = _normalize_ml_response(raw_response, latency_ms)
+        # latency_ms в ответе — полная латентность шлюза (организаторы всё равно перезаписывают)
+        result["latency_ms"] = latency_ms
+
+    check_id = result["check_id"]
+
+    # best-effort лог
     try:
         async with SessionLocal() as db:
             row = Check(
@@ -104,12 +227,12 @@ async def check(req: CheckRequest):
                 user_role=req.context.user_role,
                 user_id=req.context.user_id,
                 user_name=req.context.user_name,
-                decision=verdict.decision,
-                risk_level=verdict.risk_level,
-                risk_category=verdict.risk_category,
-                explanation=verdict.explanation,
+                decision=result["decision"],
+                risk_level=result["risk_level"],
+                risk_category=result["risk_category"],
+                explanation=result["explanation"],
                 latency_ms=latency_ms,
-                pipeline_layer="layer0",
+                pipeline_layer=result["pipeline_layer"],
                 policy_version=policy_store.version,
                 session_id=req.session_id,
             )
@@ -118,15 +241,54 @@ async def check(req: CheckRequest):
     except Exception as exc:
         print(f"[check] log error: {exc}")
 
-    return CheckResponse(
-        decision=verdict.decision,
-        risk_level=verdict.risk_level,
-        risk_category=verdict.risk_category,
-        explanation=verdict.explanation,
-        latency_ms=latency_ms,
-        pipeline_layer="layer0",
-        check_id=check_id,
-    )
+    return CheckResponse(**result)
+
+
+# ---------- /internal/checks (ML → backend, идемпотентно) ----------
+@app.post("/internal/checks", status_code=201)
+async def internal_checks(payload: dict):
+    check_id = payload.get("check_id")
+    if not check_id:
+        raise HTTPException(400, {"error": "invalid_input", "detail": "check_id required"})
+    async with SessionLocal() as db:
+        existing = await db.scalar(select(Check).where(Check.check_id == check_id))
+        if existing:
+            return {"ok": True, "duplicated": True}
+        row = Check(
+            check_id=check_id,
+            user_prompt=(payload.get("user_prompt") or "")[:4000],
+            context_json=(payload.get("context_json") or "{}")[:8000],
+            user_role=payload.get("user_role"),
+            user_id=payload.get("user_id"),
+            user_name=payload.get("user_name"),
+            decision=payload.get("decision"),
+            risk_level=payload.get("risk_level"),
+            risk_category=payload.get("risk_category"),
+            explanation=payload.get("explanation"),
+            latency_ms=payload.get("latency_ms"),
+            pipeline_layer=payload.get("pipeline_layer"),
+            policy_version=payload.get("policy_version"),
+            session_id=payload.get("session_id"),
+        )
+        db.add(row)
+        await db.commit()
+    return {"ok": True}
+
+
+# ---------- /internal/reload-policy (backend → ML) ----------
+@app.post("/internal/reload-policy")
+async def reload_policy(payload: dict):
+    if _http_client is None:
+        raise HTTPException(503, {"error": "ml_unavailable"})
+    try:
+        r = await _http_client.post(
+            f"{settings.ML_SERVICE_URL}/internal/reload-policy",
+            json=payload,
+            timeout=5.0,
+        )
+        return r.json()
+    except Exception as exc:
+        raise HTTPException(503, {"error": "ml_unavailable", "detail": str(exc)})
 
 
 # ---------------------- Auth ----------------------
