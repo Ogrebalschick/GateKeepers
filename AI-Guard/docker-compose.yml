@@ -27,17 +27,24 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
+    networks:
+      - app_net
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+        context: ./frontend
+        dockerfile: ../frontend.Dockerfile
     ports:
-      - "80:80"
+        - "80:80"
+        - "443:443"
     depends_on:
-      backend:
-        condition: service_started
+        - backend
+        - ml-service
+    volumes:
+        - ./certs:/etc/nginx/certs:ro
     restart: unless-stopped
+    networks:
+        - app_net
 
   ml-service:
     build:
@@ -58,6 +65,8 @@ services:
       backend:
         condition: service_started
     restart: unless-stopped
+    networks:
+      - app_net
 
   database:
     image: mariadb:11.4
@@ -80,6 +89,13 @@ services:
       timeout: 5s
       retries: 10
       start_period: 60s
+    networks:
+      - app_net
+
 
 volumes:
   mariadb_data:
+
+networks:
+  app_net:
+    driver: bridge

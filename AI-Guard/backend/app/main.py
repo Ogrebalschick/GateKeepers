@@ -40,7 +40,7 @@ settings = get_settings()
 _http_client: httpx.AsyncClient | None = None
 ML_TIMEOUT = httpx.Timeout(
     connect=2.0,
-    read=float(getattr(settings, "ML_TIMEOUT_SECONDS", 8.0)),
+    read=float(settings.ML_TIMEOUT_SECONDS),
     write=2.0,
     pool=2.0,
 )
