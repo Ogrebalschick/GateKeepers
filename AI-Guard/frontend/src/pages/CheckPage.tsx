@@ -272,6 +272,8 @@ export default function CheckPage() {
         comment: null,
       });
       setHandoff(decision === 'approved' ? 'approved' : 'rejected');
+      void queryClient.invalidateQueries({ queryKey: ['logs'] });
+      void queryClient.invalidateQueries({ queryKey: ['log'] });
       toast.success(decision === 'approved' ? 'Действие подтверждено' : 'Действие отклонено');
     } catch {
       toast.error('Ошибка подтверждения');

@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import DecisionBadge from './DecisionBadge';
 import RiskBadge from './RiskBadge';
-import type { Decision, LogDetail } from '../types';
+import type { LogDetail } from '../types';
 
 interface Props {
   open: boolean;
@@ -17,14 +17,15 @@ const CONFIRM_STATUS: Record<string, { label: string; className: string }> = {
   none: { label: 'Не требуется', className: 'bg-gray-100 text-gray-600' },
 };
 
-function confirmationKey(decision: Decision): keyof typeof CONFIRM_STATUS {
-  return decision === 'confirm' ? 'pending' : 'none';
+function confirmationKey(detail: LogDetail): keyof typeof CONFIRM_STATUS {
+  if (detail.confirm_status) return detail.confirm_status;
+  return detail.decision === 'confirm' ? 'pending' : 'none';
 }
 
 export default function LogDetailDrawer({ open, loading, detail, onClose }: Props) {
   if (!open) return null;
 
-  const status = detail ? CONFIRM_STATUS[confirmationKey(detail.decision)] : null;
+  const status = detail ? CONFIRM_STATUS[confirmationKey(detail)] : null;
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">

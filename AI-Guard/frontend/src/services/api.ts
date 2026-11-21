@@ -178,6 +178,7 @@ const MOCK_LOGS: LogItem[] = [
     has_attachments: false,
     session_id: 'sess-001',
     policy_version: 1,
+    confirm_status: 'pending',
   },
   {
     id: 3,
@@ -268,6 +269,7 @@ const MOCK_LOGS: LogItem[] = [
     has_attachments: false,
     session_id: 'sess-002',
     policy_version: 1,
+    confirm_status: 'pending',
   },
 ];
 
@@ -452,18 +454,49 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
     lastTwo.every((item) => item.decision === 'block');
   response.is_multi_step_attack = keywordAttack || thirdBlock;
 
-  if (payload.session_id) {
-    recordSessionCheck(payload, response);
-  }
+  recordSessionCheck(payload, response);
 
   return mockDelay(400, response);
 }
 
 function recordSessionCheck(payload: CheckRequest, response: CheckResponse): void {
   const sessionId = payload.session_id;
-  if (!sessionId) return;
-
   const now = new Date().toISOString();
+
+  if (sessionId) {
+    touchSession(sessionId, payload, response, now);
+  }
+
+  const nextId = MOCK_LOGS.reduce((max, item) => Math.max(max, item.id), 0) + 1;
+  MOCK_LOGS.push({
+    id: nextId,
+    check_id: response.check_id,
+    created_at: now,
+    user_prompt: payload.user_prompt,
+    user_role: payload.context.user_role,
+    user_id: payload.context.user_id,
+    user_name: payload.context.user_name,
+    decision: response.decision,
+    risk_level: response.risk_level,
+    risk_category: response.risk_category,
+    explanation: response.explanation,
+    latency_ms: response.latency_ms,
+    pipeline_layer: response.pipeline_layer,
+    has_attachments: payload.context.attachments.length > 0,
+    session_id: sessionId,
+    policy_version: 1,
+    confirm_status: response.decision === 'confirm' ? 'pending' : undefined,
+  });
+
+  if (response.is_multi_step_attack) MULTI_STEP_CHECKS.add(response.check_id);
+}
+
+function touchSession(
+  sessionId: string,
+  payload: CheckRequest,
+  response: CheckResponse,
+  now: string,
+): void {
   let session = MOCK_SESSIONS.find((item) => item.session_id === sessionId);
   if (!session) {
     session = {
@@ -485,28 +518,6 @@ function recordSessionCheck(payload: CheckRequest, response: CheckResponse): voi
   if (response.is_multi_step_attack && !session.threat_flags.includes('multi_step_attack')) {
     session.threat_flags.push('multi_step_attack');
   }
-
-  const nextId = MOCK_LOGS.reduce((max, item) => Math.max(max, item.id), 0) + 1;
-  MOCK_LOGS.push({
-    id: nextId,
-    check_id: response.check_id,
-    created_at: now,
-    user_prompt: payload.user_prompt,
-    user_role: payload.context.user_role,
-    user_id: payload.context.user_id,
-    user_name: payload.context.user_name,
-    decision: response.decision,
-    risk_level: response.risk_level,
-    risk_category: response.risk_category,
-    explanation: response.explanation,
-    latency_ms: response.latency_ms,
-    pipeline_layer: response.pipeline_layer,
-    has_attachments: payload.context.attachments.length > 0,
-    session_id: sessionId,
-    policy_version: 1,
-  });
-
-  if (response.is_multi_step_attack) MULTI_STEP_CHECKS.add(response.check_id);
 }
 
 // ─── GET /api/logs ────────────────────────────────────────────────────────────
@@ -514,9 +525,7 @@ function recordSessionCheck(payload: CheckRequest, response: CheckResponse): voi
 /**
  * Real: return apiClient.get<LogsResponse>('/api/logs', { params }).then(r => r.data);
  */
-export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
-  requireAuth();
-
+function filterMockLogs(params?: LogsParams): LogItem[] {
   const role = localStorage.getItem('guard_role');
   const userId = localStorage.getItem('guard_user_id');
 
@@ -531,7 +540,23 @@ export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
     const q = params.search.toLowerCase();
     items = items.filter((l) => l.user_prompt.toLowerCase().includes(q));
   }
+  if (params?.date_from) {
+    const from = new Date(params.date_from);
+    items = items.filter((l) => new Date(l.created_at) >= from);
+  }
+  if (params?.date_to) {
+    const to = new Date(params.date_to);
+    to.setHours(23, 59, 59, 999);
+    items = items.filter((l) => new Date(l.created_at) <= to);
+  }
 
+  return items;
+}
+
+export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
+  requireAuth();
+
+  const items = filterMockLogs(params);
   const page = params?.page ?? 1;
   const perPage = params?.per_page ?? 50;
   const total = items.length;
@@ -586,6 +611,7 @@ export async function getLogById(id: number): Promise<LogDetail> {
     pipeline_layer: item.pipeline_layer,
     policy_version: item.policy_version,
     session_id: item.session_id,
+    confirm_status: item.confirm_status,
   };
 
   return mockDelay(300, detail);
@@ -594,12 +620,11 @@ export async function getLogById(id: number): Promise<LogDetail> {
 // ─── GET /api/logs/export.csv ─────────────────────────────────────────────────
 
 /**
- * Triggers a CSV download. With a real API the browser download is initiated via URL.
+ * Returns a CSV blob for the current filters. The page starts the download.
  * Real: window.open(`/api/logs/export.csv?${new URLSearchParams(params as Record<string,string>).toString()}`)
  */
-export function exportLogs(params?: Omit<LogsParams, 'page' | 'per_page'>): void {
+export async function exportLogs(params?: Omit<LogsParams, 'page' | 'per_page'>): Promise<Blob> {
   requireAuth();
-  // Mock: build a CSV from MOCK_LOGS and trigger download
   const headers = [
     'id',
     'check_id',
@@ -609,10 +634,11 @@ export function exportLogs(params?: Omit<LogsParams, 'page' | 'per_page'>): void
     'decision',
     'risk_level',
     'risk_category',
+    'confirm_status',
     'latency_ms',
     'user_prompt',
   ].join(',');
-  const rows = MOCK_LOGS.map((l) =>
+  const rows = filterMockLogs(params).map((l) =>
     [
       l.id,
       l.check_id,
@@ -622,19 +648,12 @@ export function exportLogs(params?: Omit<LogsParams, 'page' | 'per_page'>): void
       l.decision,
       l.risk_level,
       l.risk_category,
+      l.confirm_status ?? '',
       l.latency_ms,
       `"${l.user_prompt.replace(/"/g, '""')}"`,
     ].join(','),
   );
-  const csv = [headers, ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `guard_logs_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  void params; // used when switching to real API
+  return new Blob([[headers, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
 }
 
 // ─── GET /api/policy ──────────────────────────────────────────────────────────
@@ -709,6 +728,9 @@ export async function getPolicyHistory(): Promise<PolicyHistoryResponse> {
  */
 export async function confirmAction(data: ConfirmRequest): Promise<ConfirmResponse> {
   requireAuth();
+
+  const log = MOCK_LOGS.find((item) => item.check_id === data.check_id);
+  if (log) log.confirm_status = data.user_decision;
 
   return mockDelay(300, {
     check_id: data.check_id,

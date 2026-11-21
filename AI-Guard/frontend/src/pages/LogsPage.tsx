@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Download, Loader2, X } from 'lucide-react';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { DecisionBadge, RiskBadge } from '../components';
 import LogDetailDrawer from '../components/LogDetailDrawer';
 import LogFilters from '../components/LogFilters';
-import { getLogById, getLogs } from '../services/api';
+import { exportLogs, getLogById, getLogs } from '../services/api';
 import type { Decision, LogItem, RiskLevel } from '../types';
 
 interface Filters {
@@ -83,22 +84,29 @@ export default function LogsPage() {
     setFilters((prev) => ({ ...prev, ...partial, page: partial.page ?? 1 }));
   }
 
-  function exportCsv() {
-    const params = new URLSearchParams();
-    const keys = [
-      'decision',
-      'risk_level',
-      'risk_category',
-      'user_id',
-      'search',
-      'date_from',
-      'date_to',
-    ] as const;
-    keys.forEach((key) => {
-      const value = filters[key];
-      if (value) params.set(key, value);
-    });
-    window.location.href = `/api/logs/export.csv?${params.toString()}`;
+  async function exportCsv() {
+    try {
+      const blob = await exportLogs({
+        decision: filters.decision || undefined,
+        risk_level: filters.risk_level || undefined,
+        risk_category: filters.risk_category || undefined,
+        user_id: filters.user_id || undefined,
+        search: filters.search || undefined,
+        date_from: filters.date_from || undefined,
+        date_to: filters.date_to || undefined,
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `logs-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Не удалось экспортировать журнал');
+    }
   }
 
   const items = data?.items ?? [];

@@ -28,6 +28,7 @@ export interface ApiError {
 // ─── Common primitives ────────────────────────────────────────────────────────
 
 export type Decision = 'allow' | 'confirm' | 'block';
+export type ConfirmStatus = 'pending' | 'approved' | 'rejected';
 export type RiskLevel = 'none' | 'low' | 'medium' | 'high' | 'critical';
 export type RiskCategory =
   | 'none'
@@ -105,6 +106,7 @@ export interface LogItem {
   has_attachments: boolean;
   session_id: string | null;
   policy_version: number;
+  confirm_status?: ConfirmStatus;
 }
 
 export interface LogsResponse {
@@ -158,6 +160,7 @@ export interface LogDetail {
   pipeline_layer: string;
   policy_version: number;
   session_id: string | null;
+  confirm_status?: ConfirmStatus;
 }
 
 // ─── GET /api/policy ──────────────────────────────────────────────────────────
