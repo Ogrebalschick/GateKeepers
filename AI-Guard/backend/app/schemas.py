@@ -1,16 +1,45 @@
+
 from typing import Literal, Optional
+
 from pydantic import BaseModel, Field
 
 
 Role = Literal["developer", "sre", "admin"]
+
+# Решения, которые возвращает проверка запроса
 Decision = Literal["allow", "confirm", "block"]
-RiskLevel = Literal["none", "low", "medium", "high", "critical"]
-RiskCategory = Literal[
-    "none", "sensitive_action", "tool_abuse", "unauthorized_data_access",
-    "prompt_injection", "jailbreak", "indirect_injection",
-    "system_prompt_extraction", "system_prompt_override", "privilege_escalation",
-    "data_exfiltration", "harmful_content", "fraud_social_engineering", "abuse",
+
+# Значения, используемые в policy.yaml
+PolicyDecision = Literal[
+    "allow",
+    "confirm",
+    "deny",
+    "block",
+    "any",
+    "nonprod",
+    "prod",
+    "names_only",
 ]
+
+RiskLevel = Literal["none", "low", "medium", "high", "critical"]
+
+RiskCategory = Literal[
+    "none",
+    "sensitive_action",
+    "tool_abuse",
+    "unauthorized_data_access",
+    "prompt_injection",
+    "jailbreak",
+    "indirect_injection",
+    "system_prompt_extraction",
+    "system_prompt_override",
+    "privilege_escalation",
+    "data_exfiltration",
+    "harmful_content",
+    "fraud_social_engineering",
+    "abuse",
+]
+
 
 class HistoryTurn(BaseModel):
     role: Literal["user", "assistant"]
@@ -72,9 +101,9 @@ class ConfirmRequest(BaseModel):
 class PolicyUpdateRequest(BaseModel):
     content_yaml: str
     comment: Optional[str] = None
-    updated_by: str = "system"
 
 
 DECISIONS = frozenset(Decision)
+POLICY_DECISIONS = frozenset(PolicyDecision)
 RISK_LEVELS = frozenset(RiskLevel)
 RISK_CATEGORIES = frozenset(RiskCategory)

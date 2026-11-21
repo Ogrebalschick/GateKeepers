@@ -47,6 +47,10 @@ ML_TIMEOUT = httpx.Timeout(
     pool=2.0,
 )
 
+# ---------- ML-ответчик ----------
+_ml_response_cache: dict[str, Any] = {}
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -264,6 +268,8 @@ async def reload_policy(payload: dict):
         return r.json()
     except Exception as exc:
         raise HTTPException(503, {"error": "ml_unavailable", "detail": str(exc)})
+
+
 
 
 # ---------------------- Auth ----------------------
@@ -567,6 +573,28 @@ async def confirm(req: ConfirmRequest, user: dict = Depends(get_current_user)):
 
 
 # ---------------------- Policy ----------------------
+
+async def _send_policy_to_ml(payload: dict) -> bool:
+    """Отправляет новую политику в ML-service."""
+
+    if _http_client is None:
+        return False
+
+    try:
+        response = await _http_client.post(
+            f"{settings.ML_SERVICE_URL}/internal/reload-policy",
+            json=payload,
+            timeout=5.0,
+        )
+
+        return response.status_code == 200
+
+    except (httpx.HTTPError, Exception) as exc:
+        print(f"[policy] ML reload failed: {exc}")
+        return False
+
+
+
 @app.get("/api/policy")
 async def get_policy(user: dict = Depends(require_roles("admin", "sre"))):
     async with SessionLocal() as db:
@@ -592,23 +620,60 @@ async def get_policy(user: dict = Depends(require_roles("admin", "sre"))):
     }
 
 
+
 @app.put("/api/policy")
 async def update_policy(
     req: PolicyUpdateRequest,
     user: dict = Depends(require_roles("admin")),
 ):
     try:
-        new_version = policy_store.apply(req.content_yaml)
-    except Exception as exc:
-        raise HTTPException(400, {"error": "invalid_yaml", "detail": str(exc)})
+        data = policy_store.parse(req.content_yaml)
+
+    except PolicyYAMLError as exc:
+        raise HTTPException(
+            400,
+            {
+                "error": "invalid_yaml",
+                "detail": str(exc),
+            },
+        )
+
+    except PolicySchemaError as exc:
+        raise HTTPException(
+            422,
+            {
+                "error": "schema_violation",
+                "detail": str(exc),
+            },
+        )
+
+    new_version = data.get("version", policy_store.version + 1)
+
+    if (
+        isinstance(new_version, bool)
+        or not isinstance(new_version, int)
+        or new_version < 1
+    ):
+        raise HTTPException(
+            422,
+            {
+                "error": "schema_violation",
+                "detail": "Policy version must be a positive integer",
+            },
+        )
 
     async with SessionLocal() as db:
-        # деактивируем старые
-        active = (await db.execute(
-            select(PolicyVersion).where(PolicyVersion.is_active.is_(True))
-        )).scalars().all()
+        active = (
+            await db.execute(
+                select(PolicyVersion).where(
+                    PolicyVersion.is_active.is_(True)
+                )
+            )
+        ).scalars().all()
+
         for pv in active:
             pv.is_active = False
+
         db.add(
             PolicyVersion(
                 version=new_version,
@@ -618,7 +683,16 @@ async def update_policy(
                 is_active=True,
             )
         )
+
         await db.commit()
+
+    policy_store.apply(req.content_yaml)
+    reload_ok = await _send_policy_to_ml(
+        {
+            "content_yaml": req.content_yaml,
+            "version": new_version,
+        }
+    )
 
     return {
         "version": new_version,
@@ -626,9 +700,8 @@ async def update_policy(
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "updated_by": user["user_id"],
         "comment": req.comment,
-        "reload_status": "ok",
+        "reload_status": "ok" if reload_ok else "failed",
     }
-
 
 @app.get("/api/policy/history")
 async def policy_history(user: dict = Depends(require_roles("admin", "sre"))):
