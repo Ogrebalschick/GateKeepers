@@ -16,6 +16,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { logout } from '../services/api';
 import { RoleBadge } from './RoleBadge';
+import { ThemeToggle } from './ThemeToggle';
 
 interface NavItem {
   to: string;
@@ -92,6 +93,9 @@ export default function Layout() {
               <div className="text-sm font-medium text-white truncate">{username || 'Гость'}</div>
               <RoleBadge role={role} />
             </div>
+          </div>
+          <div className="mb-3">
+            <ThemeToggle />
           </div>
           {isAuthenticated ? (
             <button
