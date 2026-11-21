@@ -20,7 +20,6 @@ import type {
   ConfirmRequest,
   ConfirmResponse,
   LogDetail,
-  LoginRequest,
   LoginResponse,
   LogItem,
   LogsParams,
@@ -127,17 +126,6 @@ function requireAuth(): void {
 function mockDelay<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
-
-// ─── Demo credentials ─────────────────────────────────────────────────────────
-
-const DEMO_CREDENTIALS: Record<
-  string,
-  { password: string; role: LoginResponse['role']; user_id: string }
-> = {
-  admin: { password: 'demo_admin_2026', role: 'admin', user_id: 'usr_admin_001' },
-  sre_user: { password: 'demo_sre_2026', role: 'sre', user_id: 'usr_sre_002' },
-  dev_user: { password: 'demo_dev_2026', role: 'developer', user_id: 'usr_dev_003' },
-};
 
 // ─── Mock logs ────────────────────────────────────────────────────────────────
 
@@ -431,36 +419,8 @@ hydratePolicy();
 
 // ─── POST /auth/login ─────────────────────────────────────────────────────────
 
-/**
- * Real: return apiClient.post<LoginResponse>('/auth/login', payload).then(r => r.data);
- */
 export async function login(username: string, password: string): Promise<LoginResponse> {
-  const payload: LoginRequest = { username, password };
-  void payload;
-
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const cred = DEMO_CREDENTIALS[username];
-      if (cred && cred.password === password) {
-        resolve({
-          access_token: 'mock-jwt-token',
-          token_type: 'bearer',
-          expires_in: 86400,
-          user_id: cred.user_id,
-          role: cred.role,
-        });
-      } else {
-        reject(
-          Object.assign(new Error('invalid_credentials'), {
-            response: {
-              status: 401,
-              data: { error: 'invalid_credentials', detail: 'Неверный логин или пароль' },
-            },
-          }),
-        );
-      }
-    }, 500);
-  });
+  return apiClient.post<LoginResponse>('/auth/login', { username, password }).then((r) => r.data);
 }
 
 // ─── POST /v1/check ───────────────────────────────────────────────────────────

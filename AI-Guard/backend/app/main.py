@@ -1,4 +1,7 @@
 # main.py
+import csv
+import io
+import json
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -282,6 +285,136 @@ async def login(req: LoginRequest):
 
 
 # ---------------------- Logs ----------------------
+def _parse_log_datetime(value: str, *, end_of_day: bool) -> datetime | None:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    date_only = len(raw) == 10
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HTTPException(
+            400, {"error": "invalid_input", "detail": f"invalid date: {value}"}
+        ) from exc
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    if date_only and end_of_day:
+        return parsed.replace(hour=23, minute=59, second=59, microsecond=999999)
+    if date_only:
+        return parsed.replace(hour=0, minute=0, second=0, microsecond=0)
+    if end_of_day and parsed.hour == parsed.minute == parsed.second == parsed.microsecond == 0:
+        return parsed.replace(hour=23, minute=59, second=59, microsecond=999999)
+    return parsed
+
+
+def _logs_filters(
+    *,
+    decision: str,
+    risk_level: str,
+    risk_category: str,
+    user_role: str,
+    user_id: str,
+    date_from: str,
+    date_to: str,
+    search: str,
+    user: dict,
+):
+    stmt = select(Check)
+    if user["role"] == "developer":
+        stmt = stmt.where(Check.user_id == user["user_id"])
+    elif user_id:
+        stmt = stmt.where(Check.user_id == user_id)
+    if decision:
+        stmt = stmt.where(Check.decision == decision)
+    if risk_level:
+        stmt = stmt.where(Check.risk_level == risk_level)
+    if risk_category:
+        stmt = stmt.where(Check.risk_category == risk_category)
+    if user_role:
+        stmt = stmt.where(Check.user_role == user_role)
+    start = _parse_log_datetime(date_from, end_of_day=False)
+    end = _parse_log_datetime(date_to, end_of_day=True)
+    if start is not None:
+        stmt = stmt.where(Check.created_at >= start)
+    if end is not None:
+        stmt = stmt.where(Check.created_at <= end)
+    if search:
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        stmt = stmt.where(Check.user_prompt.like(f"%{escaped}%", escape="\\"))
+    return stmt
+
+
+def _confirm_status(row: Check) -> str:
+    return row.confirmation_status or "pending"
+
+
+def _has_attachments(context_json: str | None) -> bool:
+    if not context_json:
+        return False
+    try:
+        data = json.loads(context_json)
+    except (json.JSONDecodeError, TypeError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    attachments = data.get("attachments")
+    return isinstance(attachments, list) and len(attachments) > 0
+
+
+def _log_context(row: Check) -> dict:
+    data: dict = {}
+    try:
+        parsed = json.loads(row.context_json or "")
+        if isinstance(parsed, dict):
+            data = parsed
+    except (json.JSONDecodeError, TypeError):
+        data = {}
+    history = data.get("history")
+    attachments = data.get("attachments")
+    history_items = history if isinstance(history, list) else []
+    attachment_items = attachments if isinstance(attachments, list) else []
+    previews = []
+    for item in attachment_items:
+        if not isinstance(item, dict):
+            continue
+        previews.append({
+            "type": str(item.get("type") or ""),
+            "name": str(item.get("name") or ""),
+            "content_preview": str(item.get("content") or "")[:500],
+        })
+    return {
+        "target_agent": str(data.get("target_agent") or ""),
+        "user_role": str(data.get("user_role") or row.user_role or ""),
+        "user_id": str(data.get("user_id") or row.user_id or ""),
+        "user_name": str(data.get("user_name") or row.user_name or ""),
+        "history_count": len(history_items),
+        "attachments_count": len(previews),
+        "attachments": previews,
+    }
+
+
+def _log_list_item(row: Check) -> dict:
+    return {
+        "id": row.id,
+        "check_id": row.check_id,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "user_prompt": (row.user_prompt or "")[:200],
+        "user_role": row.user_role,
+        "user_id": row.user_id,
+        "user_name": row.user_name,
+        "decision": row.decision,
+        "risk_level": row.risk_level,
+        "risk_category": row.risk_category,
+        "explanation": row.explanation,
+        "latency_ms": row.latency_ms,
+        "pipeline_layer": row.pipeline_layer,
+        "has_attachments": _has_attachments(row.context_json),
+        "session_id": row.session_id,
+        "policy_version": row.policy_version,
+        "confirm_status": _confirm_status(row),
+    }
+
+
 @app.get("/api/logs")
 async def list_logs(
     decision: str = "",
@@ -289,88 +422,121 @@ async def list_logs(
     risk_category: str = "",
     user_role: str = "",
     user_id: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    search: str = "",
     page: int = 1,
     per_page: int = 50,
     user: dict = Depends(get_current_user),
 ):
     page = max(1, page)
     per_page = min(max(1, per_page), 200)
+    stmt = _logs_filters(
+        decision=decision,
+        risk_level=risk_level,
+        risk_category=risk_category,
+        user_role=user_role,
+        user_id=user_id,
+        date_from=date_from,
+        date_to=date_to,
+        search=search,
+        user=user,
+    )
     async with SessionLocal() as db:
-        stmt = select(Check)
-        if user["role"] == "developer":
-            stmt = stmt.where(Check.user_id == user["user_id"])
-        elif user_id:
-            stmt = stmt.where(Check.user_id == user_id)
-        if decision:
-            stmt = stmt.where(Check.decision == decision)
-        if risk_level:
-            stmt = stmt.where(Check.risk_level == risk_level)
-        if risk_category:
-            stmt = stmt.where(Check.risk_category == risk_category)
-        if user_role:
-            stmt = stmt.where(Check.user_role == user_role)
-
         total = (await db.execute(
             select(func.count()).select_from(stmt.subquery())
         )).scalar_one()
-
         rows = (await db.execute(
             stmt.order_by(Check.id.desc())
             .offset((page - 1) * per_page)
             .limit(per_page)
         )).scalars().all()
 
+    total = int(total)
     return {
-        "items": [
-            {
-                "id": r.id,
-                "check_id": r.check_id,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-                "user_prompt": (r.user_prompt or "")[:200],
-                "user_role": r.user_role,
-                "user_id": r.user_id,
-                "user_name": r.user_name,
-                "decision": r.decision,
-                "risk_level": r.risk_level,
-                "risk_category": r.risk_category,
-                "explanation": r.explanation,
-                "latency_ms": r.latency_ms,
-                "pipeline_layer": r.pipeline_layer,
-                "session_id": r.session_id,
-                "policy_version": r.policy_version,
-            }
-            for r in rows
-        ],
-        "total": int(total),
+        "items": [_log_list_item(row) for row in rows],
+        "total": total,
         "page": page,
         "per_page": per_page,
-        "pages": (int(total) + per_page - 1) // per_page,
+        "pages": (total + per_page - 1) // per_page,
     }
 
 
 @app.get("/api/logs/export.csv")
-async def export_logs(user: dict = Depends(require_roles("admin", "sre"))):
+async def export_logs(
+    decision: str = "",
+    risk_level: str = "",
+    risk_category: str = "",
+    user_role: str = "",
+    user_id: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    search: str = "",
+    user: dict = Depends(require_roles("admin", "sre")),
+):
+    stmt = _logs_filters(
+        decision=decision,
+        risk_level=risk_level,
+        risk_category=risk_category,
+        user_role=user_role,
+        user_id=user_id,
+        date_from=date_from,
+        date_to=date_to,
+        search=search,
+        user=user,
+    )
     async with SessionLocal() as db:
-        rows = (await db.execute(
-            select(Check).order_by(Check.id.desc()).limit(10000)
-        )).scalars().all()
+        rows = (await db.execute(stmt.order_by(Check.id.desc()))).scalars().all()
 
-    header = "id,created_at,user_role,decision,risk_level,risk_category,latency_ms,pipeline_layer\n"
-    body = "".join(
-        f'{r.id},{r.created_at},{r.user_role},{r.decision},{r.risk_level},'
-        f'{r.risk_category},{r.latency_ms},{r.pipeline_layer}\n'
-        for r in rows
-    )
-
-    async def gen():
-        yield header
-        yield body
-
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow([
+        "id", "created_at", "user_role", "decision",
+        "risk_level", "risk_category", "latency_ms", "pipeline_layer",
+    ])
+    for row in rows:
+        writer.writerow([
+            row.id,
+            row.created_at.isoformat() if row.created_at else "",
+            row.user_role,
+            row.decision,
+            row.risk_level,
+            row.risk_category,
+            row.latency_ms,
+            row.pipeline_layer,
+        ])
+    filename = f"guard_logs_{datetime.now(timezone.utc).date().isoformat()}.csv"
     return StreamingResponse(
-        gen(),
+        iter([buffer.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="guard_logs.csv"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/api/logs/{log_id}")
+async def get_log(log_id: int, user: dict = Depends(get_current_user)):
+    async with SessionLocal() as db:
+        row = await db.get(Check, log_id)
+    if row is None:
+        raise HTTPException(404, {"error": "not_found"})
+    if user["role"] == "developer" and row.user_id != user["user_id"]:
+        raise HTTPException(403, {"error": "forbidden"})
+    return {
+        "id": row.id,
+        "check_id": row.check_id,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "user_prompt": row.user_prompt or "",
+        "context": _log_context(row),
+        "decision": row.decision,
+        "risk_level": row.risk_level,
+        "risk_category": row.risk_category,
+        "explanation": row.explanation,
+        "latency_ms": row.latency_ms,
+        "pipeline_layer": row.pipeline_layer,
+        "policy_version": row.policy_version,
+        "session_id": row.session_id,
+        "confirm_status": _confirm_status(row),
+    }
 
 
 # ---------------------- Confirm ----------------------
