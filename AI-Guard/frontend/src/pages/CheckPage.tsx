@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
-  ArrowRight,
+  ArrowDown,
   CheckCircle,
   Clock,
   Loader2,
@@ -160,14 +160,14 @@ function FlowArrow({ status }: { status: AgentStatus }) {
     ) : status === 'pending_confirmation' ? (
       <Clock className="w-6 h-6 text-yellow-500" />
     ) : status === 'allowed' ? (
-      <ArrowRight className="w-6 h-6 text-green-500" />
+      <ArrowDown className="w-6 h-6 text-green-500" />
     ) : (
-      <ArrowRight className="w-6 h-6 text-gray-300" />
+      <ArrowDown className="w-6 h-6 text-gray-300" />
     );
 
   return (
-    <div className="flex items-center justify-center py-1 lg:py-0 lg:pt-16" aria-hidden>
-      <div className="rotate-90 lg:rotate-0 transition-all duration-500">{icon}</div>
+    <div className="flex items-center justify-center self-center py-1" aria-hidden>
+      {icon}
     </div>
   );
 }
@@ -311,8 +311,8 @@ export default function CheckPage() {
         </p>
       </div>
 
-      {/* Form → Сторож → DevOps-ассистент */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_auto_minmax(0,1fr)] gap-4 lg:gap-3 items-start">
+      {/* Form | Сторож ↓ DevOps-ассистент */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 items-start">
         {/* ── Left: Form ────────────────────────────────────────────────── */}
         <form onSubmit={handleSubmit} className="space-y-4 min-w-0">
           {/* Prompt textarea */}
@@ -491,30 +491,34 @@ export default function CheckPage() {
           </div>
         </form>
 
-        {/* ── Right: Result ──────────────────────────────────────────────── */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-w-0">
-          <div className="px-5 py-3.5 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-700">Анализ безопасности</h2>
+        {/* ── Right: result, then assistant ─────────────────────────────── */}
+        <div className="flex flex-col gap-4 min-w-0">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-w-0 w-full">
+            <div className="px-5 py-3.5 border-b border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-700">Анализ безопасности</h2>
+            </div>
+
+            <div className="flex-1 p-5">
+              {pageState === 'idle' && <IdlePlaceholder />}
+              {pageState === 'loading' && <LoadingState />}
+              {pageState === 'result' && result && (
+                <ResultCard
+                  result={result}
+                  onConfirm={() => handleDecision('approved')}
+                  onReject={() => handleDecision('rejected')}
+                  confirmLoading={confirmLoading}
+                  showActions={handoff === 'pending'}
+                />
+              )}
+            </div>
           </div>
 
-          <div className="flex-1 p-5">
-            {pageState === 'idle' && <IdlePlaceholder />}
-            {pageState === 'loading' && <LoadingState />}
-            {pageState === 'result' && result && (
-              <ResultCard
-                result={result}
-                onConfirm={() => handleDecision('approved')}
-                onReject={() => handleDecision('rejected')}
-                confirmLoading={confirmLoading}
-                showActions={handoff === 'pending'}
-              />
-            )}
+          <FlowArrow status={agentStatus} />
+
+          <div className="w-full">
+            <DevOpsAgentMock status={agentStatus} response={agentResponse} />
           </div>
         </div>
-
-        <FlowArrow status={agentStatus} />
-
-        <DevOpsAgentMock status={agentStatus} response={agentResponse} />
       </div>
     </div>
   );
