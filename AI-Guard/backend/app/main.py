@@ -1,5 +1,4 @@
 # main.py
-import json
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -213,34 +212,7 @@ async def check(req: CheckRequest):
         # latency_ms в ответе — полная латентность шлюза (организаторы всё равно перезаписывают)
         result["latency_ms"] = latency_ms
 
-    check_id = result["check_id"]
-
-    # best-effort лог
-    try:
-        async with SessionLocal() as db:
-            row = Check(
-                check_id=check_id,
-                user_prompt=req.user_prompt[:4000],
-                context_json=json.dumps(
-                    req.context.model_dump(), ensure_ascii=False
-                )[:8000],
-                user_role=req.context.user_role,
-                user_id=req.context.user_id,
-                user_name=req.context.user_name,
-                decision=result["decision"],
-                risk_level=result["risk_level"],
-                risk_category=result["risk_category"],
-                explanation=result["explanation"],
-                latency_ms=latency_ms,
-                pipeline_layer=result["pipeline_layer"],
-                policy_version=policy_store.version,
-                session_id=req.session_id,
-            )
-            db.add(row)
-            await db.commit()
-    except Exception as exc:
-        print(f"[check] log error: {exc}")
-
+    # Журнал пишет только POST /internal/checks (вызов из ml-service).
     return CheckResponse(**result)
 
 
