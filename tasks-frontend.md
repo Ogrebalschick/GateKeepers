@@ -25,28 +25,127 @@ npm run dev
 
 ---
 
-### FE-002: Конфигурация nginx + Dockerfile
-**Время:** 20 мин | **Результат:** Docker-образ собирается, nginx проксирует `/v1/` и `/api/`
+### FE-002: Настройка Nginx и Dockerfile для Frontend
+**Время:** 20 мин | **Результат:** Docker-образ собирается, Nginx корректно проксирует запросы и раздаёт React-сборку
 
-**Шаги:**
-- `nginx.conf`:
-  ```
-  location /v1/  { proxy_pass http://ml-service:8000; }
-  location /api/ { proxy_pass http://backend:8081; }
-  location /     { try_files $uri $uri/ /index.html; }
-  ```
-  - Добавить CORS заголовки для preflight `OPTIONS`
-  - `add_header Access-Control-Allow-Origin *;`
-- Multi-stage `Dockerfile`:
-  - `FROM node:20-alpine AS build` → `npm ci && npm run build`
-  - `FROM nginx:alpine` → `COPY dist/ /usr/share/nginx/html/` + `COPY nginx.conf /etc/nginx/conf.d/default.conf`
-  - `EXPOSE 80`
+> **Архитектурный принцип:** весь внешний трафик идёт через порт `80` контейнера `frontend`.  
+> Frontend-код НЕ знает о портах `8081` и `8000` — использует `baseURL: ""` (пустой), Nginx маршрутизирует сам.  
+> Полная nginx-конфигурация: → `api-contract.md` раздел «Правило маршрутизации Nginx».
+
+#### Шаг 1 — Создать `frontend/nginx.conf`
+
+```nginx
+server {
+    listen 80;
+    server_name localhost;
+
+    # Проксирование ML-сервиса (для evaluate.py и фронта)
+    location /v1/ {
+        proxy_pass http://ml-service:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # Проксирование Backend API (журнал, политика, сессии, /auth/login)
+    location /api/ {
+        proxy_pass http://backend:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /auth/ {
+        proxy_pass http://backend:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # Раздача React SPA (React Router — history mode)
+    location / {
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+#### Шаг 2 — Создать `frontend/Dockerfile` (multi-stage)
+
+```dockerfile
+# ── Stage 1: сборка React-приложения ──────────────────────────────────────────
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ── Stage 2: Nginx раздаёт статику и проксирует API ───────────────────────────
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+#### Шаг 3 — Убедиться что `src/services/api.ts` использует пустой `baseURL`
+
+```ts
+// ✅ Правильно — Nginx сам маршрутизирует
+const apiClient = axios.create({ baseURL: "" });  // /api/* → backend:8081
+const mlClient  = axios.create({ baseURL: "" });  // /v1/*  → ml-service:8000
+
+// ❌ Неправильно — хардкод порта ломает Docker-окружение
+const apiClient = axios.create({ baseURL: "http://localhost:8081" });
+```
+
+#### Шаг 4 — Добавить `.dockerignore` в `frontend/`
+
+```
+node_modules
+dist
+.env*
+*.local
+```
+
+#### Шаг 5 — Убедиться, что в `docker-compose.yml` сервис `frontend` выглядит так
+
+```yaml
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"          # основной порт; если 80 занят на хосте — замени на "8080:80"
+    depends_on:
+      - backend
+      - ml-service
+    restart: unless-stopped
+```
+
+> ⚠️ **Не добавляй** переменные окружения `REACT_APP_API_URL` / `VITE_API_URL` — они больше не нужны.  
+> Frontend использует `baseURL: ""` и полагается на Nginx-прокси.
 
 **Критерий готовности:**
 ```bash
+# Шаг A — изолированная проверка образа (без backend/ml)
 docker build -t frontend frontend/
 docker run -p 3000:80 frontend
-# localhost:3000 открывается
+# → http://localhost:3000              — React SPA загружается
+# → http://localhost:3000/logs        — не даёт 404 (React Router работает)
+
+# Шаг B — полная проверка через docker-compose
+docker-compose up --build
+# → http://localhost                  — React SPA
+# → curl http://localhost/v1/health   — 200 от ml-service
+# → curl http://localhost/api/health  — 200 от backend
+# → http://localhost/api/logs (с Bearer-токеном) — данные журнала
+
+# evaluate.py — финальный прогон
+python evaluate.py --data dev.jsonl --endpoint http://localhost/v1/check
+# если порт 8080: --endpoint http://localhost:8080/v1/check
+# если внешний IP: --endpoint http://<SERVER_IP>/v1/check
 ```
 
 ---

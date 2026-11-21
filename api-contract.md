@@ -57,12 +57,125 @@
 
 ---
 
-## Правило маршрутизации nginx (frontend)
+## Правило маршрутизации Nginx (frontend-контейнер)
 
+> **Единственная точка входа снаружи — порт `80` контейнера `frontend`.**  
+> Frontend-код использует `baseURL: ""` (пустой) — он не знает о портах 8081 и 8000.  
+> Nginx сам решает, куда проксировать запрос.
+
+```nginx
+server {
+    listen 80;
+    server_name localhost;
+
+    # ML-сервис: пайплайн проверок, вызывается evaluate.py и фронтендом
+    location /v1/ {
+        proxy_pass http://ml-service:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # Backend API: журнал, политика, сессии, статистика, авторизация
+    location /api/ {
+        proxy_pass http://backend:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    # /auth/ тоже идёт на backend (POST /auth/login)
+    location /auth/ {
+        proxy_pass http://backend:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # React SPA — всё остальное отдаём index.html (для React Router)
+    location / {
+        root /usr/share/nginx/html;
+        index index.html index.htm;
+        try_files $uri $uri/ /index.html;
+    }
+}
 ```
-/v1/*   → ml-service:8000   (ML-пайплайн, вызывает evaluate.py)
-/api/*  → backend:8081      (UI API: журнал, политика, сессии)
-/*      → React SPA (index.html)
+
+**Следствия для разработки:**
+
+| Контекст | URL для обращения к ML |
+|----------|------------------------|
+| `docker-compose` (продакшн/демо) | `http://localhost:80/v1/check` или `http://<внешний-IP>/v1/check` |
+| `evaluate.py` (оценщик) | `http://localhost:80/v1/check` (или `--endpoint http://<IP>/v1/check`) |
+| `npm run dev` (локальная разработка) | Vite proxy на `localhost:5173` → настроить в `vite.config.ts` |
+
+**Frontend `src/services/api.ts`:**
+```ts
+// apiClient — /api/* и /auth/*
+const apiClient = axios.create({ baseURL: "" });   // ← пустой baseURL, Nginx сам маршрутизирует
+
+// mlClient — /v1/*
+const mlClient  = axios.create({ baseURL: "" });
+```
+
+---
+
+## 💡 Важные нюансы для команды
+
+### Для Frontend-инженера
+В `src/services/api.ts` axios-инстансы создаются с **пустым `baseURL`** — Nginx сам разберёт, куда идти, по первому сегменту пути (`/v1` или `/api`):
+```ts
+import axios from 'axios';
+
+// ✅ Правильно
+const apiClient = axios.create({ baseURL: "" }); // /api/* и /auth/* → backend:8081
+const mlClient  = axios.create({ baseURL: "" }); // /v1/*           → ml-service:8000
+
+// ❌ Неправильно — хардкод ломает Docker
+const apiClient = axios.create({ baseURL: "http://localhost:8081" });
+```
+Не добавляй переменные `REACT_APP_API_URL` / `VITE_API_URL` — они больше не нужны.
+
+---
+
+### Для Backend-инженера
+В FastAPI (`backend`) обязательно включи CORS:
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],       # при проксировании Nginx браузер видит один домен,
+    allow_methods=["*"],       # но preflight OPTIONS всё равно требует явного разрешения
+    allow_headers=["*"],
+)
+```
+Слушай на `0.0.0.0`, а не `127.0.0.1`:
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8081
+```
+
+---
+
+### Для AI-инженера (ml-service)
+ml-service **обязан** слушать `0.0.0.0:8000`, иначе Nginx не сможет достучаться из другого контейнера:
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+В `docker-compose.yml` порт `8000` можно **не публиковать** наружу — достаточно внутренней Docker-сети. Nginx обращается к `http://ml-service:8000` по имени сервиса.
+
+---
+
+### Для запуска evaluate.py
+После поднятия `docker-compose up --build` используй:
+```bash
+# Если маппинг портов 80:80
+python evaluate.py --data dev.jsonl --endpoint http://localhost/v1/check
+
+# Если маппинг портов 8080:80 (порт 80 занят на хосте)
+python evaluate.py --data dev.jsonl --endpoint http://localhost:8080/v1/check
+
+# На внешнем сервере / VPS
+python evaluate.py --data dev.jsonl --endpoint http://<SERVER_IP>/v1/check
 ```
 
 ---
