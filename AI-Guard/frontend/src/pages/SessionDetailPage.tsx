@@ -41,7 +41,7 @@ export default function SessionDetailPage() {
     <div>
       <Link
         to="/sessions"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 mb-4"
+        className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-900 mb-4 cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
         Назад к сессиям

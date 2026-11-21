@@ -184,7 +184,7 @@ export default function PolicyPage() {
                   <button
                     type="button"
                     onClick={startEdit}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm cursor-pointer"
                   >
                     <Pencil className="w-4 h-4" />
                     Редактировать
@@ -207,7 +207,7 @@ export default function PolicyPage() {
                       type="button"
                       onClick={submit}
                       disabled={save.isPending}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer disabled:cursor-not-allowed"
                     >
                       {save.isPending ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -220,7 +220,7 @@ export default function PolicyPage() {
                       type="button"
                       onClick={cancelEdit}
                       disabled={save.isPending}
-                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 flex items-center gap-2 text-sm"
+                      className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer disabled:cursor-not-allowed"
                     >
                       <X className="w-4 h-4" />
                       Отмена
@@ -318,7 +318,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={[
-        'px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors',
+        'px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors cursor-pointer',
         active
           ? 'border-blue-500 text-blue-600 font-medium'
           : 'border-transparent text-gray-500 hover:text-gray-800',

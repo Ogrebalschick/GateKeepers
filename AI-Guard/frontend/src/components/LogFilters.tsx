@@ -24,7 +24,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
       <label className="flex flex-col gap-1 text-xs text-gray-500">
         Решение
         <select
-          className={fieldClass}
+          className={`${fieldClass} cursor-pointer`}
           value={values.decision}
           onChange={(e) => onChange({ decision: e.target.value as Decision | '' })}
         >
@@ -38,7 +38,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
       <label className="flex flex-col gap-1 text-xs text-gray-500">
         Уровень риска
         <select
-          className={fieldClass}
+          className={`${fieldClass} cursor-pointer`}
           value={values.risk_level}
           onChange={(e) => onChange({ risk_level: e.target.value as RiskLevel | '' })}
         >
@@ -65,7 +65,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
         Дата от
         <input
           type="date"
-          className={fieldClass}
+          className={`${fieldClass} cursor-pointer`}
           value={values.date_from}
           onChange={(e) => onChange({ date_from: e.target.value })}
         />
@@ -75,7 +75,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
         Дата до
         <input
           type="date"
-          className={fieldClass}
+          className={`${fieldClass} cursor-pointer`}
           value={values.date_to}
           onChange={(e) => onChange({ date_to: e.target.value })}
         />
@@ -84,7 +84,7 @@ export default function LogFilters({ values, onChange, onReset }: Props) {
       <button
         type="button"
         onClick={onReset}
-        className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+        className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
       >
         <RotateCcw className="w-4 h-4" />
         Сбросить

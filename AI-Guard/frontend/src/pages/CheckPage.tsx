@@ -127,7 +127,7 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }
             disabled={confirmLoading}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700
                        disabled:bg-gray-400 text-white px-4 py-2 rounded-lg
-                       text-sm font-medium transition-colors"
+                       text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             {confirmLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -141,7 +141,7 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }
             disabled={confirmLoading}
             className="flex items-center gap-2 bg-red-600 hover:bg-red-700
                        disabled:bg-gray-400 text-white px-4 py-2 rounded-lg
-                       text-sm font-medium transition-colors"
+                       text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             <XCircle className="w-4 h-4" />
             Отказать
@@ -339,7 +339,7 @@ export default function CheckPage() {
               disabled={pageState === 'loading'}
               className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         disabled:bg-gray-50 disabled:text-gray-400 transition"
+                         disabled:bg-gray-50 disabled:text-gray-400 transition cursor-pointer disabled:cursor-not-allowed"
             >
               <option value="admin">admin — полный доступ</option>
               <option value="sre">sre — просмотр</option>
@@ -358,7 +358,7 @@ export default function CheckPage() {
               disabled={pageState === 'loading'}
               className="w-full p-3 border border-gray-300 rounded-lg text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         disabled:bg-gray-50 disabled:text-gray-400 transition"
+                         disabled:bg-gray-50 disabled:text-gray-400 transition cursor-pointer disabled:cursor-not-allowed"
             >
               <option value="">Без сессии</option>
               <option value="__new__">Новая сессия</option>
@@ -380,7 +380,7 @@ export default function CheckPage() {
             {sessionChoice && sessionChoice !== '__new__' && (
               <Link
                 to={`/sessions/${sessionChoice}`}
-                className="mt-1 inline-block text-xs text-blue-600 hover:text-blue-800"
+                className="mt-1 inline-block text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
               >
                 Открыть сессию
               </Link>
@@ -411,7 +411,7 @@ export default function CheckPage() {
               type="button"
               onClick={() => setShowAttachment((v) => !v)}
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800
-                         transition-colors"
+                         transition-colors cursor-pointer"
             >
               {showAttachment ? <X className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
               {showAttachment ? 'Убрать вложение' : 'Добавить вложение'}
@@ -446,7 +446,7 @@ export default function CheckPage() {
             disabled={pageState === 'loading' || !prompt.trim()}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400
                        text-white py-3 rounded-lg font-semibold text-sm
-                       flex items-center justify-center gap-2 transition-colors"
+                       flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             {pageState === 'loading' ? (
               <>
@@ -476,7 +476,7 @@ export default function CheckPage() {
                   type="button"
                   onClick={() => setPrompt(text)}
                   className="w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-gray-100
-                             text-gray-600 transition-colors"
+                             text-gray-600 transition-colors cursor-pointer"
                 >
                   <span className="font-medium">{label}:</span>{' '}
                   <span className="text-gray-500">{text}</span>

@@ -54,7 +54,7 @@ export default function SessionsPage() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Новая сессия
@@ -208,7 +208,7 @@ function CreateSessionModal({
       <button
         type="button"
         aria-label="Закрыть"
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/40 cursor-pointer"
         onClick={onClose}
       />
       <form
@@ -220,7 +220,7 @@ function CreateSessionModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-500 hover:bg-gray-100"
+            className="p-1 rounded-lg text-gray-500 hover:bg-gray-100 cursor-pointer"
             aria-label="Закрыть"
           >
             <X className="w-5 h-5" />
@@ -230,7 +230,7 @@ function CreateSessionModal({
         <label className="flex flex-col gap-1 text-sm text-gray-600 mb-3">
           Роль
           <select
-            className={fieldClass}
+            className={`${fieldClass} cursor-pointer`}
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
           >
@@ -257,14 +257,14 @@ function CreateSessionModal({
             type="button"
             onClick={onClose}
             disabled={create.isPending}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm"
+            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50 text-sm cursor-pointer disabled:cursor-not-allowed"
           >
             Отмена
           </button>
           <button
             type="submit"
             disabled={create.isPending}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm cursor-pointer disabled:cursor-not-allowed"
           >
             {create.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
             Создать

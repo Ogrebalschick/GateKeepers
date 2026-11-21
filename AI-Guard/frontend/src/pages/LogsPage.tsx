@@ -118,7 +118,7 @@ export default function LogsPage() {
         <button
           type="button"
           onClick={exportCsv}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm"
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm cursor-pointer"
         >
           <Download className="w-4 h-4" />
           Экспорт CSV
@@ -141,9 +141,9 @@ export default function LogsPage() {
             type="button"
             aria-label="Сбросить фильтр пользователя"
             onClick={() => patch({ user_id: '', user_name: '' })}
-            className="hover:text-red-600"
+            className="hover:text-red-600 cursor-pointer"
           >
-            <X className="w-4 h-4 cursor-pointer hover:text-red-600" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -208,7 +208,7 @@ export default function LogsPage() {
             type="button"
             disabled={page <= 1 || isLoading}
             onClick={() => patch({ page: page - 1 })}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-white"
+            className="px-3 py-1.5 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-white cursor-pointer disabled:cursor-not-allowed"
           >
             ‹ Назад
           </button>
@@ -216,7 +216,7 @@ export default function LogsPage() {
             type="button"
             disabled={!data || page >= data.pages || isLoading}
             onClick={() => patch({ page: page + 1 })}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-white"
+            className="px-3 py-1.5 border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-white cursor-pointer disabled:cursor-not-allowed"
           >
             Далее ›
           </button>

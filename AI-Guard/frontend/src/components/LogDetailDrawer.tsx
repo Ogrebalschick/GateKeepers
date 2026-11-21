@@ -30,7 +30,7 @@ export default function LogDetailDrawer({ open, loading, detail, onClose }: Prop
     <div className="fixed inset-0 z-40 flex justify-end">
       <button
         type="button"
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/40 cursor-pointer"
         aria-label="Закрыть"
         onClick={onClose}
       />
@@ -39,7 +39,12 @@ export default function LogDetailDrawer({ open, loading, detail, onClose }: Prop
           <h2 className="text-lg font-semibold text-gray-900">
             {detail ? `Детали проверки #${detail.id}` : 'Детали проверки'}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Закрыть панель">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть панель"
+            className="cursor-pointer"
+          >
             <X className="w-5 h-5 text-gray-500 hover:text-gray-800" />
           </button>
         </div>

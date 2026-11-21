@@ -32,7 +32,8 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 function navClass({ isActive }: { isActive: boolean }) {
-  const base = 'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors';
+  const base =
+    'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors cursor-pointer';
   return isActive
     ? `${base} bg-blue-600 text-white font-medium`
     : `${base} text-slate-300 hover:bg-slate-800 hover:text-white`;
@@ -50,7 +51,7 @@ export default function Layout() {
       {/* ── Mobile overlay ────────────────────────────────────────────── */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-20 bg-black/50 md:hidden"
+          className="fixed inset-0 z-20 bg-black/50 md:hidden cursor-pointer"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -95,7 +96,7 @@ export default function Layout() {
             onClick={() => {
               logout();
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Выйти
@@ -110,7 +111,7 @@ export default function Layout() {
         <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
           <button
             onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
             aria-label="Открыть меню"
           >
             <Menu className="w-5 h-5" />
