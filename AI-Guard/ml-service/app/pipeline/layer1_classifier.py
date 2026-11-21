@@ -18,15 +18,22 @@ def extract_features_text(user_prompt: str, context: dict[str, Any] | None = Non
     attachments = context.get("attachments") or []
     history_text = " ".join(str(x.get("content", "")) for x in history if isinstance(x, dict))
     attachment_text = " ".join(str(x.get("content", "")) for x in attachments if isinstance(x, dict))
+    has_url = int(bool(re.search(r'https?://|www\\.', user_prompt, re.I)))
+    has_base64 = int(bool(re.search(
+        r'(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{8,}={0,2}(?![A-Za-z0-9+/])',
+        user_prompt,
+    )))
+    has_prod = int(bool(re.search(r'production|\\bprod\\b|прод', user_prompt, re.I)))
+    cyrillic = int(sum('а' <= ch.lower() <= 'я' for ch in prompt) > max(1, len(prompt) * 0.3))
     flags = [
         f"ROLE_{role}",
         f"HAS_ATTACHMENT_{int(bool(attachments))}",
         f"HISTORY_LEN_{min(len(history), 10)}",
-        f"HAS_URL_{int(bool(re.search(r'https?://|www\\.', user_prompt, re.I)))}",
-        f"HAS_BASE64_{int(bool(re.search(r'(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{8,}={0,2}(?![A-Za-z0-9+/])', user_prompt)))}",
+        f"HAS_URL_{has_url}",
+        f"HAS_BASE64_{has_base64}",
         f"HAS_CODE_{int('```' in user_prompt)}",
-        f"HAS_PROD_{int(bool(re.search(r'production|\\bprod\\b|прод', user_prompt, re.I)))}",
-        f"CYRILLIC_{int(sum('а' <= ch.lower() <= 'я' for ch in prompt) > max(1, len(prompt) * 0.3))}",
+        f"HAS_PROD_{has_prod}",
+        f"CYRILLIC_{cyrillic}",
     ]
     return " ".join(flags) + "\nCURRENT\n" + prompt + "\nHISTORY\n" + history_text + "\nATTACHMENTS\n" + attachment_text
 

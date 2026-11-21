@@ -1,6 +1,8 @@
 # FROM base
 FROM python:3.14-slim
 
+ENV BACKEND_URL=http://backend:8081
+
 WORKDIR /app
 
 COPY requirements.txt .

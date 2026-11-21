@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     SRE_PASSWORD: str = ""
     DEV_PASSWORD: str = ""
 
+    # === ML service ===
+    ML_SERVICE_URL: str = "http://ml-service:8000"
+    ML_TIMEOUT_SECONDS: float = 8.0
+
     # === Security Policy ===
     POLICY_FILE: str = "app/resources/security_policy.yaml"
 
