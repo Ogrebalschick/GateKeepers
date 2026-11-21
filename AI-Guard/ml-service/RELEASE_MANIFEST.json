@@ -1,0 +1,60 @@
+{
+  "release": "Astra Guard ML Service",
+  "version": "2.4.0",
+  "release_status": "finalized_local_release",
+  "training": {
+    "dataset": "astra_public_v2/dev.jsonl",
+    "rows": 500,
+    "augmentation_rows": 0,
+    "classifier": "SGDClassifier(loss=log_loss)",
+    "feature_schema": "v2.4_intent_normalized_role_tagged_context"
+  },
+  "verification": {
+    "pytest": "145 passed",
+    "official_evaluator": {
+      "examples": 500,
+      "score": 1.0,
+      "automatic_points": 70,
+      "invalid_or_timeout": 0,
+      "strict_high_critical_block_recall": 1.0,
+      "p95_ms": 17.0868
+    },
+    "challenge_suite": {
+      "examples": 72,
+      "decision_accuracy": 1.0,
+      "risk_category_accuracy": 1.0,
+      "risk_level_accuracy": 1.0,
+      "false_allow": 0,
+      "false_block": 0,
+      "invalid_responses": 0,
+      "p95_ms": 8.24
+    },
+    "grouped_oof": {
+      "folds": 5,
+      "seed": 42,
+      "pipeline_accuracy": 0.998,
+      "pipeline_macro_f1": 0.9948012788853942,
+      "balanced_cost_score": 0.9994441356309061,
+      "strict_high_critical_block_recall": 1.0,
+      "model_only_accuracy": 0.894,
+      "model_only_macro_f1": 0.8229139281770861,
+      "model_only_strict_high_critical_block_recall": 0.8855421686746988
+    }
+  },
+  "environment": {
+    "tested_python": "3.13.5",
+    "target_local_python": "3.14",
+    "docker_build": "not_run_docker_unavailable"
+  },
+  "sha256": {
+    "VERSION": "2ad7b0c3f0ede58c3165b7a8a5479e890a758d39bfe8683eaef50ce6afad7232",
+    "models/guard_model.joblib": "c88dbde7c83e7759e390c8157045775748994a283ca8e9c2c7e78c5d53db91f1",
+    "models/training_metadata.json": "11f1a7c226fba43c1258b0509f3cc7bbfa7e1adb2ed0966ad4bd1a250932ad0c",
+    "policy.yaml": "f95092ac5d4ea6921862ffb2d8a28cb878fa83b8d6eebcdc9dcbd7757252e815",
+    "astra_public_v2/dev.jsonl": "29bd3b4270a19f7dfd484e38747c3a67609fb2335cdbeec95c2ad4fcee25282b",
+    "astra_public_v2/evaluate.py": "343ceda199a5e3e25e4f859a8ff6b40998ff3624b4190460c85f6bef40d2341c",
+    "reports/release_v24_official.json": "9d04ca423b8680bcfdb077de3108c014029c3e08ccecbeea563d3e395120a8e1",
+    "reports/release_v24_challenge.json": "dc4f6773cbc115f06d252c1fbff203f09c3fc4564600b92c2ffab47bc01a75b6",
+    "reports/release_v24_grouped_oof.json": "66b65b960b8e242c31d0388a12a448bd93aeef59ec51e2c4438192442001c23a"
+  }
+}

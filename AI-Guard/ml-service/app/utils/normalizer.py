@@ -13,6 +13,12 @@ _CONFUSABLES = str.maketrans({
     "А": "A", "Е": "E", "О": "O", "Р": "P", "С": "C", "Х": "X",
     "У": "Y", "К": "K", "М": "M", "Т": "T", "В": "B", "Н": "H",
 })
+_LATIN_CONFUSABLES_TO_CYRILLIC = str.maketrans({
+    "a": "а", "e": "е", "o": "о", "p": "р", "c": "с", "x": "х",
+    "y": "у", "k": "к", "m": "м", "t": "т", "b": "в", "h": "н",
+    "A": "А", "E": "Е", "O": "О", "P": "Р", "C": "С", "X": "Х",
+    "Y": "У", "K": "К", "M": "М", "T": "Т", "B": "В", "H": "Н",
+})
 _LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
 
 
@@ -39,6 +45,16 @@ def _compact_spaced_letters(text: str) -> str:
     return pattern.sub(lambda match: re.sub(r"\s+", "", match.group(0)), text)
 
 
+def _mixed_script_variant(text: str) -> str:
+    parts = re.findall(r"\w+|\W+", text, flags=re.UNICODE)
+    result = []
+    for token in parts:
+        has_cyrillic = bool(re.search(r"[А-Яа-яЁё]", token))
+        has_latin = bool(re.search(r"[A-Za-z]", token))
+        result.append(token.translate(_LATIN_CONFUSABLES_TO_CYRILLIC) if has_cyrillic and has_latin else token)
+    return "".join(result)
+
+
 def normalize(text: str) -> str:
     if not text:
         return ""
@@ -57,6 +73,18 @@ def normalize(text: str) -> str:
     leet = value.translate(_LEET)
     if leet != value:
         additions.append(leet)
+    mixed_script = _mixed_script_variant(value)
+    if mixed_script != value:
+        additions.append(mixed_script)
+    combined_confusable_leet = confusable.translate(_LEET)
+    if combined_confusable_leet not in {value, confusable, leet}:
+        additions.append(combined_confusable_leet)
+    combined_leet_confusable = leet.translate(_CONFUSABLES)
+    if combined_leet_confusable not in {value, confusable, leet, combined_confusable_leet}:
+        additions.append(combined_leet_confusable)
+    combined_leet_mixed = _mixed_script_variant(leet)
+    if combined_leet_mixed not in {value, confusable, leet, combined_confusable_leet, combined_leet_confusable}:
+        additions.append(combined_leet_mixed)
     value = re.sub(r"[ \t\r\n]+", " ", value).strip()
     normalized_additions = [re.sub(r"[ \t\r\n]+", " ", x).strip() for x in additions if x.strip()]
     return value + ("\n" + "\n".join(dict.fromkeys(normalized_additions)) if normalized_additions else "")
