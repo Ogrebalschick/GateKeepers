@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { DecisionBadge, RiskBadge } from '../components';
 import DevOpsAgentMock, { type AgentStatus } from '../components/DevOpsAgentMock';
+import { DEVOPS_SYSTEM_PROMPT } from '../constants/systemPrompts';
 import { checkPrompt, confirmAction, getSessions } from '../services/api';
 import type { CheckResponse, UserRole } from '../types';
 import { getMockAgentResponse } from '../utils/mockAgentResponses';
@@ -235,7 +236,7 @@ export default function CheckPage() {
           user_role: role,
           user_id: userId,
           user_name: name,
-          system_prompt: '',
+          system_prompt: DEVOPS_SYSTEM_PROMPT,
           history: [],
           attachments,
         },

@@ -393,6 +393,7 @@ export async function login(username: string, password: string): Promise<LoginRe
 /**
  * ⚠️ No auth — evaluate.py calls this without a token.
  * Real: return mlClient.post<CheckResponse>('/v1/check', payload).then(r => r.data);
+ * Тело запроса — весь payload, включая context.system_prompt.
  */
 export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse> {
   // No requireAuth() — this endpoint is public by design
