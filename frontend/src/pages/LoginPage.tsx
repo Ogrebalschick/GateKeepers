@@ -1,3 +1,4 @@
+import { GraduationCap, Loader2, Shield } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -50,7 +51,9 @@ export default function LoginPage() {
 
           {/* Logo + Title */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-3 select-none">🛡️</div>
+            <div className="flex justify-center mb-3">
+              <Shield className="w-14 h-14 text-blue-600" />
+            </div>
             <h1 className="text-2xl font-bold text-gray-900">ИИ-Сторож</h1>
             <p className="text-gray-500 text-sm mt-1">Вход в систему</p>
           </div>
@@ -105,10 +108,7 @@ export default function LoginPage() {
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
+                  <Loader2 className="animate-spin h-4 w-4" />
                   Вход…
                 </>
               ) : (
@@ -119,7 +119,10 @@ export default function LoginPage() {
 
           {/* Demo credentials hint */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600">
-            <p className="font-semibold text-gray-700 mb-2">🎓 Demo credentials (для жюри)</p>
+            <p className="font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+              <GraduationCap className="w-4 h-4" />
+              Demo credentials (для жюри)
+            </p>
             <table className="w-full">
               <thead>
                 <tr className="text-gray-500">
