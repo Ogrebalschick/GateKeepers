@@ -2,11 +2,9 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: ../backend.Dockerfile
     ports:
       - "8081:8081"
-    # volumes:
-    #   - ./backend:/app     # ← ТОЛЬКО для разработки (hot-reload)
     env_file:
       - .env
     environment:
@@ -53,29 +51,52 @@ services:
   ml-service:
     build:
       context: ./ml-service
-      dockerfile: Dockerfile
+      dockerfile: ../ml.Dockerfile
     ports:
       - "8000:8000"
-    # ⚠️ эти два монтирования требуют реальных файлов на хосте:
-    # volumes:
-      # - ./model/model.gguf:/app/model.gguf:ro
-      # - ./model/llama.cpp:/app/llama.cpp:ro
-    # environment:
-      # - MODEL_PATH=/app/model.gguf
-      # - LLAMA_CPP_PATH=/app/llama.cpp
     environment:
       - BACKEND_URL=http://backend:8081
-      - LLAMA_URL=${LLAMA_URL:-http://llama:8080}
-      - LLM_ENABLED=${LLM_ENABLED:-false}
+      - LLAMA_URL=${LLAMA_URL:-http://host.docker.internal:8080}
       - LLM_MIN_CONFIDENCE=${LLM_MIN_CONFIDENCE:-0.85}
       - LLM_TIMEOUT_SECONDS=${LLM_TIMEOUT_SECONDS:-8.0}
       - LLM_HEALTH_TIMEOUT_SECONDS=${LLM_HEALTH_TIMEOUT_SECONDS:-1.0}
+      - LLM_ENABLED=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       backend:
         condition: service_started
     restart: unless-stopped
     networks:
       - app_net
+
+  # llama:
+  #   image: ${LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp:server}
+  #   # build:
+  #   #   context: ./llama
+  #   #   dockerfile: ../llama.Dockerfile
+  #   ports:
+  #     - "8080:8080"
+  #   command:
+  #     - "-m"
+  #     - "/models/model.gguf"
+  #     - "--host"
+  #     - "0.0.0.0"
+  #     - "--port"
+  #     - "8080"
+  #     - "-c"
+  #     - "${LLAMA_CONTEXT_SIZE:-2048}"
+  #   volumes:
+  #     - /lingames/llama.cpp/build/bin:/app/llama.cpp:ro
+  #     - type: bind
+  #       source: "${LLAMA_MODEL_PATH:?Set LLAMA_MODEL_PATH to a local GGUF model file}"
+  #       target: /models/model.gguf
+  #       read_only: true
+  #       bind:
+  #         create_host_path: false
+  #   restart: unless-stopped
+  #   networks:
+  #     - app_net
 
   database:
     image: mariadb:11.4
@@ -100,7 +121,6 @@ services:
       start_period: 60s
     networks:
       - app_net
-
 
 volumes:
   mariadb_data:
