@@ -5,6 +5,7 @@ import type { SessionMessage } from '../../types';
 interface MessageBubbleProps {
   message: SessionMessage;
   fullText?: string;
+  attachmentNames?: string[];
   agentText?: string;
 }
 
@@ -19,13 +20,25 @@ function formatTime(value: string): string {
   });
 }
 
-export default function MessageBubble({ message, fullText, agentText }: MessageBubbleProps) {
+export default function MessageBubble({
+  message,
+  fullText,
+  attachmentNames = [],
+  agentText,
+}: MessageBubbleProps) {
   const text = fullText ?? message.user_prompt;
 
   return (
     <article className="space-y-2">
       <p className="text-xs font-medium text-gray-500 dark:text-slate-400">Вы сказали</p>
       <p className="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">{text}</p>
+      {attachmentNames.length > 0 && (
+        <ul className="space-y-0.5 text-xs text-gray-500 dark:text-slate-400">
+          {attachmentNames.map((name, index) => (
+            <li key={`${name}-${index}`}>📎 {name}</li>
+          ))}
+        </ul>
+      )}
       <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
         <div className="flex flex-wrap items-center gap-2">
           <DecisionBadge decision={message.decision} size="sm" />

@@ -3,9 +3,9 @@ import { MessageSquare, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
-import ChatInput from '../components/chat/ChatInput';
+import ChatInput, { type ChatAttachment } from '../components/chat/ChatInput';
 import ChatLayout from '../components/chat/ChatLayout';
-import MessageList from '../components/chat/MessageList';
+import MessageList, { type ChatCheckDraft } from '../components/chat/MessageList';
 import NewChatModal from '../components/chat/NewChatModal';
 import SessionSidebar from '../components/chat/SessionSidebar';
 import { RoleBadge } from '../components/RoleBadge';
@@ -54,7 +54,7 @@ export default function ChatPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const [fullTextByCheckId, setFullTextByCheckId] = useState<Record<string, string>>({});
+  const [draftByCheckId, setDraftByCheckId] = useState<Record<string, ChatCheckDraft>>({});
   const [localTurns, setLocalTurns] = useState<LocalTurn[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const missingToastFor = useRef<string | null>(null);
@@ -91,11 +91,11 @@ export default function ChatPage() {
       .map((turn) => turn.message);
     return [...server, ...extra].slice(-20).map((message) => ({
       role: 'user',
-      content: fullTextByCheckId[message.check_id] ?? message.user_prompt,
+      content: draftByCheckId[message.check_id]?.text ?? message.user_prompt,
     }));
   }
 
-  async function handleSend(text: string): Promise<boolean> {
+  async function handleSend(text: string, files: ChatAttachment[]): Promise<boolean> {
     if (closed) return false;
     if (isAuthenticated && !selectedSessionId) {
       toast.error('Сначала выберите чат');
@@ -103,6 +103,9 @@ export default function ChatPage() {
     }
 
     const sessionId = isAuthenticated ? selectedSessionId : null;
+    const attachments = files
+      .filter((file) => file.content.length > 0)
+      .map(({ type, name, content }) => ({ type, name, content }));
     setPending(true);
     try {
       const data = await checkPrompt({
@@ -115,7 +118,7 @@ export default function ChatPage() {
           user_name: username || 'Гость',
           system_prompt: DEVOPS_SYSTEM_PROMPT,
           history: historyFor(sessionId),
-          attachments: [],
+          attachments,
         },
       });
 
@@ -132,7 +135,10 @@ export default function ChatPage() {
         latency_ms: data.latency_ms,
         is_multi_step_attack: data.is_multi_step_attack === true,
       };
-      setFullTextByCheckId((prev) => ({ ...prev, [data.check_id]: text }));
+      setDraftByCheckId((prev) => ({
+        ...prev,
+        [data.check_id]: { text, attachmentNames: attachments.map((file) => file.name) },
+      }));
       setLocalTurns((prev) => [...prev, { sessionId, message }]);
       if (sessionId) {
         await queryClient.invalidateQueries({ queryKey: ['session', sessionId] });
@@ -258,7 +264,7 @@ export default function ChatPage() {
               isError={Boolean(
                 isAuthenticated && sessionQuery.isError && !isSessionNotFound(sessionQuery.error),
               )}
-              fullTextByCheckId={fullTextByCheckId}
+              draftByCheckId={draftByCheckId}
               pendingMessages={pendingMessages}
             />
           ) : (

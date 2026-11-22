@@ -4,11 +4,16 @@ import type { SessionDetail, SessionMessage } from '../../types';
 import { getMockAgentResponse } from '../../utils/mockAgentResponses';
 import MessageBubble from './MessageBubble';
 
+export interface ChatCheckDraft {
+  text: string;
+  attachmentNames: string[];
+}
+
 interface MessageListProps {
   session: SessionDetail | undefined;
   isLoading: boolean;
   isError: boolean;
-  fullTextByCheckId: Record<string, string>;
+  draftByCheckId: Record<string, ChatCheckDraft>;
   pendingMessages?: SessionMessage[];
 }
 
@@ -25,7 +30,7 @@ export default function MessageList({
   session,
   isLoading,
   isError,
-  fullTextByCheckId,
+  draftByCheckId,
   pendingMessages = [],
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -70,13 +75,14 @@ export default function MessageList({
         {!isLoading && !isError && messages.length > 0 && (
           <div className="space-y-4">
             {messages.map((message) => {
-              const fullText = fullTextByCheckId[message.check_id];
+              const draft = draftByCheckId[message.check_id];
               return (
                 <MessageBubble
                   key={message.check_id}
                   message={message}
-                  fullText={fullText}
-                  agentText={agentTextFor(message, fullText)}
+                  fullText={draft?.text}
+                  attachmentNames={draft?.attachmentNames}
+                  agentText={agentTextFor(message, draft?.text)}
                 />
               );
             })}
