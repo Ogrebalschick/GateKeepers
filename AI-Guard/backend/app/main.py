@@ -23,7 +23,7 @@ from .auth import (
 )
 from .config import get_settings
 from .database import SessionLocal, init_db
-from .db_models import Check, PolicyVersion
+from .db_models import Check, CheckSession, GuardSession, PolicyVersion
 from .policy import (
     PolicySchemaError,
     PolicyYAMLError,
@@ -230,6 +230,18 @@ async def check(req: CheckRequest):
     return CheckResponse(**result)
 
 
+def _append_threat_flag(raw: str | None, flag: str) -> str:
+    try:
+        flags = json.loads(raw or "[]")
+    except (json.JSONDecodeError, TypeError):
+        flags = []
+    if not isinstance(flags, list):
+        flags = []
+    if flag not in flags:
+        flags.append(flag)
+    return json.dumps(flags, ensure_ascii=False)
+
+
 # ---------- /internal/checks (ML → backend, идемпотентно) ----------
 @app.post("/internal/checks", status_code=201)
 async def internal_checks(payload: dict):
@@ -240,6 +252,13 @@ async def internal_checks(payload: dict):
         existing = await db.scalar(select(Check).where(Check.check_id == check_id))
         if existing:
             return {"ok": True, "duplicated": True}
+        is_multi = False
+        session_id = (payload.get("session_id") or "").strip()
+        session = None
+        if session_id:
+            session = await db.scalar(
+                select(GuardSession).where(GuardSession.session_id == session_id)
+            )
         row = Check(
             check_id=check_id,
             user_prompt=(payload.get("user_prompt") or "")[:4000],
@@ -257,8 +276,45 @@ async def internal_checks(payload: dict):
             session_id=payload.get("session_id"),
         )
         db.add(row)
+        if session is not None and session.status != "closed":
+            previous = (
+                await db.execute(
+                    select(Check.decision)
+                    .join(CheckSession, CheckSession.check_id == Check.check_id)
+                    .where(CheckSession.session_id == session.session_id)
+                    .order_by(CheckSession.message_index.desc())
+                    .limit(2)
+                )
+            ).scalars().all()
+            decision = payload.get("decision")
+            is_multi = (
+                decision == "block"
+                and len(previous) >= 2
+                and all(item == "block" for item in previous)
+            )
+            last_index = await db.scalar(
+                select(func.max(CheckSession.message_index)).where(
+                    CheckSession.session_id == session.session_id
+                )
+            )
+            db.add(
+                CheckSession(
+                    session_id=session.session_id,
+                    check_id=check_id,
+                    message_index=int(last_index or 0) + 1,
+                    is_multi_step_attack=is_multi,
+                )
+            )
+            session.request_count = int(session.request_count or 0) + 1
+            session.last_activity_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            if is_multi:
+                session.threat_flags_json = _append_threat_flag(
+                    session.threat_flags_json, "multi_step_attack"
+                )
+            if session.request_count >= int(session.max_requests or 0):
+                session.status = "closed"
         await db.commit()
-    return {"ok": True}
+    return {"ok": True, "is_multi_step_attack": is_multi}
 
 
 # ---------- /internal/reload-policy (backend → ML) ----------

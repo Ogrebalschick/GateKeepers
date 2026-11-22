@@ -34,6 +34,7 @@ class CheckRequest(BaseModel):
 
 
 class CheckResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
     decision: str
     risk_level: str
     risk_category: str

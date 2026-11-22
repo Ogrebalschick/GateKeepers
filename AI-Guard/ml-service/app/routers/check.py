@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.config import (
@@ -60,17 +60,20 @@ def _masked_context(context: dict) -> dict:
     return result
 
 
-async def _send_backend_log(payload: dict) -> None:
+async def _send_backend_log(payload: dict) -> dict | None:
     try:
         async with httpx.AsyncClient(timeout=1.5) as client:
             response = await client.post(f"{BACKEND_URL}/internal/checks", json=payload)
             response.raise_for_status()
+            data = response.json()
+            return data if isinstance(data, dict) else None
     except httpx.HTTPError as exc:
         logger.warning("Backend log delivery failed: %s", exc.__class__.__name__)
+        return None
 
 
 @router.post("/v1/check", response_model=CheckResponse)
-def check(request: CheckRequest, background_tasks: BackgroundTasks):
+async def check(request: CheckRequest):
     started = time.perf_counter()
     if len(request.user_prompt) > MAX_INPUT_CHARS:
         return JSONResponse(status_code=400, content={"error": "invalid_input", "detail": f"user_prompt exceeds {MAX_INPUT_CHARS} characters"})
@@ -118,7 +121,13 @@ def check(request: CheckRequest, background_tasks: BackgroundTasks):
         "pipeline_layer": response.pipeline_layer,
         "policy_version": get_version(),
         "session_id": request.session_id,
+        "user_role": request.context.user_role,
+        "user_id": request.context.user_id,
+        "user_name": request.context.user_name,
     }
+    body = response.model_dump()
     if BACKEND_URL:
-        background_tasks.add_task(_send_backend_log, log_payload)
-    return response
+        logged = await _send_backend_log(log_payload)
+        if isinstance(logged, dict) and "is_multi_step_attack" in logged:
+            body["is_multi_step_attack"] = bool(logged["is_multi_step_attack"])
+    return body

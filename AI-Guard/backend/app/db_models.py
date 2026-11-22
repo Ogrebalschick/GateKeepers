@@ -41,6 +41,16 @@ class PolicyVersion(Base):
     is_active: Mapped[bool] = mapped_column(default=False)
 
 
+class CheckSession(Base):
+    __tablename__ = "check_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(64), index=True)
+    check_id: Mapped[str] = mapped_column(String(64), unique=True)
+    message_index: Mapped[int] = mapped_column(Integer)
+    is_multi_step_attack: Mapped[bool] = mapped_column(default=False)
+
+
 class GuardSession(Base):
     __tablename__ = "sessions"
 
