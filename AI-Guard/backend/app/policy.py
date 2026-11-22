@@ -50,6 +50,30 @@ def _require_string_list(value: Any, field: str) -> None:
         raise PolicySchemaError(f"{field} must be a list of strings")
 
 
+def _validate_compatibility(data: dict[str, Any]) -> None:
+    """Повторяет отказы ml-service для compatibility и требует сам ключ.
+
+    У ML нет ключа подменяется на {} и пустой список, такой документ прошёл бы
+    загрузчик. Задача требует 422 и запрещает сохранять политику без этого блока.
+    """
+    if "compatibility" not in data:
+        raise PolicySchemaError("Missing required policy fields: compatibility")
+    compatibility = data["compatibility"]
+    if not isinstance(compatibility, dict):
+        raise PolicySchemaError("compatibility must be a mapping")
+    if "nonprod_resource_patterns" not in compatibility:
+        raise PolicySchemaError(
+            "compatibility.nonprod_resource_patterns must be a list of non-empty strings"
+        )
+    patterns = compatibility["nonprod_resource_patterns"]
+    if not isinstance(patterns, list) or not all(
+        isinstance(item, str) and item.strip() for item in patterns
+    ):
+        raise PolicySchemaError(
+            "compatibility.nonprod_resource_patterns must be a list of non-empty strings"
+        )
+
+
 def _validate_tool_rule(rule: Any, field: str) -> None:
     if isinstance(rule, str):
         if rule not in _ALLOWED_TOOL_DECISIONS:
@@ -102,6 +126,7 @@ def validate_policy(data: Any) -> dict[str, Any]:
 
     _require_string_list(data["always_block"], "always_block")
     _require_string_list(data["context_dependent"], "context_dependent")
+    _validate_compatibility(data)
 
     agents = data["agents"]
     if not isinstance(agents, dict) or not agents:

@@ -231,6 +231,30 @@ async def check(req: CheckRequest):
     return CheckResponse(**result)
 
 
+def _identity_field(payload: dict, key: str) -> str:
+    """user_id / user_role / user_name: верхний уровень, иначе context, иначе context_json. Не NULL."""
+    value = payload.get(key)
+    if value is None:
+        context = payload.get("context")
+        if isinstance(context, dict):
+            value = context.get(key)
+    if value is None:
+        raw = payload.get("context_json")
+        parsed: Any = None
+        if isinstance(raw, dict):
+            parsed = raw
+        elif isinstance(raw, str) and raw.strip():
+            try:
+                parsed = json.loads(raw)
+            except (json.JSONDecodeError, TypeError):
+                parsed = None
+        if isinstance(parsed, dict):
+            value = parsed.get(key)
+    if value is None:
+        return ""
+    return str(value)
+
+
 def _append_threat_flag(raw: str | None, flag: str) -> str:
     try:
         flags = json.loads(raw or "[]")
@@ -264,9 +288,9 @@ async def internal_checks(payload: dict):
             check_id=check_id,
             user_prompt=(payload.get("user_prompt") or "")[:4000],
             context_json=(payload.get("context_json") or "{}")[:8000],
-            user_role=payload.get("user_role"),
-            user_id=payload.get("user_id"),
-            user_name=payload.get("user_name"),
+            user_role=_identity_field(payload, "user_role"),
+            user_id=_identity_field(payload, "user_id"),
+            user_name=_identity_field(payload, "user_name"),
             decision=payload.get("decision"),
             risk_level=payload.get("risk_level"),
             risk_category=payload.get("risk_category"),
