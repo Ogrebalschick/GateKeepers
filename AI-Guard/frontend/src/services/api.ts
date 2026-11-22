@@ -17,7 +17,7 @@ import {
   persistSeedChecks,
   querySeedLogs,
   querySeedSessions,
-  readStoredChecks,
+  hasSeed,
   seedLogDetail,
   seedSessionDetail,
   seedStats,
@@ -151,10 +151,6 @@ export function ensureSeedData(): Promise<void> {
     });
   }
   return seedPromise;
-}
-
-function hasSeed(): boolean {
-  return readStoredChecks().length > 0;
 }
 
 // =============================================================================

@@ -10,7 +10,7 @@
  */
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { SEED_LOADED_KEY, markSeedSkipped, persistSeedChecks, querySeedLogs, querySeedSessions, readStoredChecks, seedLogDetail, seedSessionDetail, seedStats, seedTimeline, } from '../data/seed-checks';
+import { SEED_LOADED_KEY, hasSeed, markSeedSkipped, persistSeedChecks, querySeedLogs, querySeedSessions, seedLogDetail, seedSessionDetail, seedStats, seedTimeline, } from '../data/seed-checks';
 // =============================================================================
 // Storage & utilities
 // =============================================================================
@@ -77,8 +77,12 @@ export function ensureSeedData() {
         seedPromise = (async () => {
             try {
                 const [logs, sessions] = await Promise.all([
-                    apiClient.get('/api/logs', { params: { page: 1, per_page: 1 } }).then((r) => r.data),
-                    apiClient.get('/api/sessions', { params: { page: 1, per_page: 1 } }).then((r) => r.data),
+                    apiClient
+                        .get('/api/logs', { params: { page: 1, per_page: 1 } })
+                        .then((r) => r.data),
+                    apiClient
+                        .get('/api/sessions', { params: { page: 1, per_page: 1 } })
+                        .then((r) => r.data),
                 ]);
                 const hasData = (logs.total ?? logs.items?.length ?? 0) > 0 ||
                     (sessions.total ?? sessions.items?.length ?? 0) > 0;
@@ -99,9 +103,6 @@ export function ensureSeedData() {
         });
     }
     return seedPromise;
-}
-function hasSeed() {
-    return readStoredChecks().length > 0;
 }
 // =============================================================================
 // API functions
@@ -193,7 +194,9 @@ export async function createSession(data) {
 export async function getSessions(params) {
     await ensureSeedData();
     try {
-        const data = await apiClient.get('/api/sessions', { params }).then((r) => r.data);
+        const data = await apiClient
+            .get('/api/sessions', { params })
+            .then((r) => r.data);
         if ((data.total ?? 0) > 0 || (data.items?.length ?? 0) > 0 || !hasSeed())
             return data;
         return querySeedSessions(params);

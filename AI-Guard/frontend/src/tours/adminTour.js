@@ -117,7 +117,7 @@ function waitFor(check, timeoutMs = 2000) {
     });
 }
 export function createAdminTourSteps(navigate, role) {
-    const normalized = String(role ?? '').trim().toLowerCase();
+    const normalized = role.trim().toLowerCase();
     return TOUR_STEPS.filter((step) => step.roles.includes(normalized)).map((step) => {
         const route = step.route;
         return {
