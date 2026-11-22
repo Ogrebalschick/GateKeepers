@@ -15,7 +15,8 @@ export function useTour() {
 export function TourProvider({ children }) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { role } = useCurrentUser();
+    const { role, isAuthenticated } = useCurrentUser();
+    const canOfferTour = isAuthenticated && role !== 'guest';
     const [run, setRun] = useState(false);
     const [tourKey, setTourKey] = useState(0);
     const [showPrompt, setShowPrompt] = useState(false);
@@ -25,11 +26,18 @@ export function TourProvider({ children }) {
     useEffect(() => {
         if (location.pathname === '/login')
             return;
+        if (!canOfferTour) {
+            setShowPrompt(false);
+            if (!localStorage.getItem(TOUR_PROMPTED_KEY)) {
+                localStorage.setItem(TOUR_PROMPTED_KEY, '1');
+            }
+            return;
+        }
         if (localStorage.getItem(TOUR_COMPLETED_KEY) || localStorage.getItem(TOUR_PROMPTED_KEY)) {
             return;
         }
         setShowPrompt(true);
-    }, [location.pathname]);
+    }, [location.pathname, canOfferTour]);
     const finishTour = useCallback(() => {
         localStorage.setItem(TOUR_COMPLETED_KEY, '1');
         localStorage.setItem(TOUR_PROMPTED_KEY, '1');
@@ -40,6 +48,8 @@ export function TourProvider({ children }) {
             navigate(back);
     }, [navigate]);
     const startTour = useCallback(() => {
+        if (!isAuthenticated || role === 'guest')
+            return;
         originPath.current = location.pathname;
         setShowPrompt(false);
         localStorage.setItem(TOUR_PROMPTED_KEY, '1');
@@ -55,7 +65,7 @@ export function TourProvider({ children }) {
                 restarting.current = false;
             }, 50);
         }, wait);
-    }, [location.pathname, navigate]);
+    }, [location.pathname, navigate, isAuthenticated, role]);
     const onEvent = useCallback((data) => {
         if (restarting.current)
             return;
@@ -65,7 +75,7 @@ export function TourProvider({ children }) {
             finishTour();
         }
     }, [finishTour]);
-    return (_jsxs(TourContext.Provider, { value: { startTour, running: run }, children: [children, showPrompt && !run && location.pathname !== '/login' && (_jsx(WelcomePrompt, { onStart: startTour, onLater: () => {
+    return (_jsxs(TourContext.Provider, { value: { startTour, running: run }, children: [children, canOfferTour && showPrompt && !run && location.pathname !== '/login' && (_jsx(WelcomePrompt, { onStart: startTour, onLater: () => {
                     localStorage.setItem(TOUR_PROMPTED_KEY, '1');
                     setShowPrompt(false);
                 } })), _jsx(Joyride, { run: run, continuous: true, scrollToFirstStep: true, steps: steps, onEvent: onEvent, locale: {

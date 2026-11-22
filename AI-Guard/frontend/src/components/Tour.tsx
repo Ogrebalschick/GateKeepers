@@ -32,7 +32,8 @@ export function useTour() {
 export function TourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role } = useCurrentUser();
+  const { role, isAuthenticated } = useCurrentUser();
+  const canOfferTour = isAuthenticated && role !== 'guest';
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -43,11 +44,18 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (location.pathname === '/login') return;
+    if (!canOfferTour) {
+      setShowPrompt(false);
+      if (!localStorage.getItem(TOUR_PROMPTED_KEY)) {
+        localStorage.setItem(TOUR_PROMPTED_KEY, '1');
+      }
+      return;
+    }
     if (localStorage.getItem(TOUR_COMPLETED_KEY) || localStorage.getItem(TOUR_PROMPTED_KEY)) {
       return;
     }
     setShowPrompt(true);
-  }, [location.pathname]);
+  }, [location.pathname, canOfferTour]);
 
   const finishTour = useCallback(() => {
     localStorage.setItem(TOUR_COMPLETED_KEY, '1');
@@ -59,6 +67,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   const startTour = useCallback(() => {
+    if (!isAuthenticated || role === 'guest') return;
     originPath.current = location.pathname;
     setShowPrompt(false);
     localStorage.setItem(TOUR_PROMPTED_KEY, '1');
@@ -73,7 +82,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
         restarting.current = false;
       }, 50);
     }, wait);
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, isAuthenticated, role]);
 
   const onEvent = useCallback<EventHandler>(
     (data) => {
@@ -92,7 +101,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   return (
     <TourContext.Provider value={{ startTour, running: run }}>
       {children}
-      {showPrompt && !run && location.pathname !== '/login' && (
+      {canOfferTour && showPrompt && !run && location.pathname !== '/login' && (
         <WelcomePrompt
           onStart={startTour}
           onLater={() => {
