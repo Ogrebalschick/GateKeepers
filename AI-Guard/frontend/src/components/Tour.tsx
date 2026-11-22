@@ -32,16 +32,14 @@ export function useTour() {
 export function TourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useCurrentUser();
+  const { role } = useCurrentUser();
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
   const restarting = useRef(false);
+  const originPath = useRef(location.pathname);
 
-  const steps = useMemo(
-    () => createAdminTourSteps(navigate, isAuthenticated),
-    [navigate, isAuthenticated],
-  );
+  const steps = useMemo(() => createAdminTourSteps(navigate, role), [navigate, role]);
 
   useEffect(() => {
     if (location.pathname === '/login') return;
@@ -56,9 +54,12 @@ export function TourProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(TOUR_PROMPTED_KEY, '1');
     setRun(false);
     setShowPrompt(false);
-  }, []);
+    const back = originPath.current || '/';
+    if (window.location.pathname !== back) navigate(back);
+  }, [navigate]);
 
   const startTour = useCallback(() => {
+    originPath.current = location.pathname;
     setShowPrompt(false);
     localStorage.setItem(TOUR_PROMPTED_KEY, '1');
     restarting.current = true;

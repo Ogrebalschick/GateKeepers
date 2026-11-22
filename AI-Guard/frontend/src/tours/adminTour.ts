@@ -4,7 +4,7 @@ import type { Step } from 'react-joyride';
 export const TOUR_COMPLETED_KEY = 'guard_tour_completed';
 export const TOUR_PROMPTED_KEY = 'guard_tour_prompted';
 
-const PROTECTED_ROUTES = new Set(['/logs', '/policy', '/sessions', '/dashboard']);
+const AUTH_ROLES = ['admin', 'sre', 'developer'];
 
 interface TourStepInput {
   target: string;
@@ -12,6 +12,7 @@ interface TourStepInput {
   content: string;
   placement?: Step['placement'];
   route?: string;
+  roles: string[];
 }
 
 const TOUR_STEPS: TourStepInput[] = [
@@ -22,6 +23,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Это система безопасности для проверки промптов, отправляемых к ИИ-ассистентам. Сейчас мы пройдём по всем ключевым функциям. Нажмите «Далее» для начала.',
     placement: 'center',
     route: '/',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-check-input',
@@ -30,6 +32,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Здесь вы вводите промпт пользователя, который хотите проверить. ИИ-Сторож проанализирует его и решит: разрешить, заблокировать или запросить подтверждение.',
     placement: 'right',
     route: '/',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-check-role',
@@ -38,6 +41,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Выберите роль, от имени которой отправляется запрос. Разные роли имеют разные права: admin — полный доступ, sre — просмотр, developer — ограниченный.',
     placement: 'right',
     route: '/',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-check-submit',
@@ -46,6 +50,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Нажмите эту кнопку, чтобы отправить промпт на проверку. ИИ-Сторож оценит запрос по политике безопасности и вернёт решение.',
     placement: 'top',
     route: '/',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-check-result',
@@ -54,6 +59,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Здесь отображается решение: «Разрешено» (зелёный), «Заблокировано» (красный) или «Требует подтверждения» (жёлтый). Также показаны категория риска, объяснение и задержка обработки.',
     placement: 'left',
     route: '/',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-check-agent',
@@ -62,6 +68,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Если запрос разрешён, здесь появится ответ ИИ-ассистента. Если заблокирован — ассистент не получит запрос.',
     placement: 'left',
     route: '/',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-logs-link',
@@ -70,6 +77,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Здесь хранится история всех проверок. Вы можете фильтровать по решению, уровню риска, датам и искать по тексту промпта.',
     placement: 'right',
     route: '/logs',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-logs-table',
@@ -78,6 +86,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Каждая строка — одна проверка. Кликните на строку, чтобы увидеть детали: полный промпт, контекст, решение модели и статус подтверждения.',
     placement: 'top',
     route: '/logs',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-policy-link',
@@ -86,6 +95,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Здесь администратор может изменить YAML-политику безопасности. После сохранения новая версия политики автоматически загружается в ML-сервис.',
     placement: 'right',
     route: '/policy',
+    roles: ['admin'],
   },
   {
     target: '#tour-sessions-link',
@@ -94,6 +104,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Сессии позволяют отслеживать многошаговые атаки. Если пользователь в рамках одной сессии отправляет несколько подозрительных запросов, система может заблокировать всю сессию.',
     placement: 'right',
     route: '/sessions',
+    roles: AUTH_ROLES,
   },
   {
     target: '#tour-dashboard-link',
@@ -102,6 +113,7 @@ const TOUR_STEPS: TourStepInput[] = [
       'Здесь собрана статистика: общее количество проверок, распределение по решениям, топ категорий рисков и график активности за последние 24 часа.',
     placement: 'right',
     route: '/dashboard',
+    roles: ['admin', 'sre'],
   },
   {
     target: 'body',
@@ -109,6 +121,7 @@ const TOUR_STEPS: TourStepInput[] = [
     content:
       'Теперь вы знаете основные функции ИИ-Сторожа. Вы можете запустить тур снова через кнопку «Пройти обучение» в боковом меню. Удачи на демо!',
     placement: 'center',
+    roles: AUTH_ROLES,
   },
 ];
 
@@ -132,18 +145,16 @@ function waitFor(check: () => boolean, timeoutMs = 2000) {
   });
 }
 
-export function createAdminTourSteps(navigate: NavigateFunction, isAuthenticated: boolean): Step[] {
-  return TOUR_STEPS.map((step) => {
-    const blocked = !!step.route && PROTECTED_ROUTES.has(step.route) && !isAuthenticated;
-    const target = blocked ? 'body' : step.target;
-    const placement = blocked ? 'center' : step.placement;
-    const route = blocked ? undefined : step.route;
+export function createAdminTourSteps(navigate: NavigateFunction, role: string): Step[] {
+  const normalized = role.trim().toLowerCase();
+  return TOUR_STEPS.filter((step) => step.roles.includes(normalized)).map((step) => {
+    const route = step.route;
 
     return {
-      target,
+      target: step.target,
       title: step.title,
       content: step.content,
-      placement,
+      placement: step.placement,
       data: { route },
       before: async () => {
         if (!route || window.location.pathname === route) return;
@@ -151,7 +162,7 @@ export function createAdminTourSteps(navigate: NavigateFunction, isAuthenticated
         await waitFor(
           () =>
             window.location.pathname === route &&
-            (target === 'body' || document.querySelector(target) !== null),
+            (step.target === 'body' || document.querySelector(step.target) !== null),
         );
         await delay(400);
       },

@@ -11,6 +11,18 @@
 
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import {
+  SEED_LOADED_KEY,
+  markSeedSkipped,
+  persistSeedChecks,
+  querySeedLogs,
+  querySeedSessions,
+  readStoredChecks,
+  seedLogDetail,
+  seedSessionDetail,
+  seedStats,
+  seedTimeline,
+} from '../data/seed-checks';
 import type {
   CheckRequest,
   CheckResponse,
@@ -104,6 +116,47 @@ function attachResponseInterceptor(client: ReturnType<typeof axios.create>): voi
 attachResponseInterceptor(apiClient);
 attachResponseInterceptor(mlClient);
 
+let seedPromise: Promise<void> | null = null;
+
+/** Load demo journal/sessions once when the backend has no rows yet. */
+export function ensureSeedData(): Promise<void> {
+  if (localStorage.getItem(SEED_LOADED_KEY) === 'true') return Promise.resolve();
+  if (!localStorage.getItem('guard_token')) return Promise.resolve();
+  if (!seedPromise) {
+    seedPromise = (async () => {
+      try {
+        const [logs, sessions] = await Promise.all([
+          apiClient
+            .get<LogsResponse>('/api/logs', { params: { page: 1, per_page: 1 } })
+            .then((r) => r.data),
+          apiClient
+            .get<SessionsResponse>('/api/sessions', { params: { page: 1, per_page: 1 } })
+            .then((r) => r.data),
+        ]);
+        const hasData =
+          (logs.total ?? logs.items?.length ?? 0) > 0 ||
+          (sessions.total ?? sessions.items?.length ?? 0) > 0;
+        if (hasData) {
+          markSeedSkipped();
+          return;
+        }
+        persistSeedChecks();
+      } catch (error: unknown) {
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        if (status === 401 || status === 403) return;
+        persistSeedChecks();
+      }
+    })().finally(() => {
+      seedPromise = null;
+    });
+  }
+  return seedPromise;
+}
+
+function hasSeed(): boolean {
+  return readStoredChecks().length > 0;
+}
+
 // =============================================================================
 // API functions
 // =============================================================================
@@ -146,13 +199,28 @@ export async function checkPrompt(payload: CheckRequest): Promise<CheckResponse>
 // ─── GET /api/logs ────────────────────────────────────────────────────────────
 
 export async function getLogs(params?: LogsParams): Promise<LogsResponse> {
-  return apiClient.get<LogsResponse>('/api/logs', { params }).then((r) => r.data);
+  await ensureSeedData();
+  try {
+    const data = await apiClient.get<LogsResponse>('/api/logs', { params }).then((r) => r.data);
+    if ((data.total ?? 0) > 0 || (data.items?.length ?? 0) > 0 || !hasSeed()) return data;
+    return querySeedLogs(params);
+  } catch (error) {
+    if (!hasSeed()) throw error;
+    return querySeedLogs(params);
+  }
 }
 
 // ─── GET /api/logs/{id} ───────────────────────────────────────────────────────
 
 export async function getLogById(id: number): Promise<LogDetail> {
-  return apiClient.get<LogDetail>(`/api/logs/${id}`).then((r) => r.data);
+  await ensureSeedData();
+  try {
+    return await apiClient.get<LogDetail>(`/api/logs/${id}`).then((r) => r.data);
+  } catch (error) {
+    const detail = seedLogDetail(id);
+    if (!detail) throw error;
+    return detail;
+  }
 }
 
 // ─── GET /api/logs/export.csv ─────────────────────────────────────────────────
@@ -196,13 +264,30 @@ export async function createSession(data: SessionCreateRequest): Promise<Session
 // ─── GET /api/sessions ────────────────────────────────────────────────────────
 
 export async function getSessions(params?: SessionsParams): Promise<SessionsResponse> {
-  return apiClient.get<SessionsResponse>('/api/sessions', { params }).then((r) => r.data);
+  await ensureSeedData();
+  try {
+    const data = await apiClient
+      .get<SessionsResponse>('/api/sessions', { params })
+      .then((r) => r.data);
+    if ((data.total ?? 0) > 0 || (data.items?.length ?? 0) > 0 || !hasSeed()) return data;
+    return querySeedSessions(params);
+  } catch (error) {
+    if (!hasSeed()) throw error;
+    return querySeedSessions(params);
+  }
 }
 
 // ─── GET /api/sessions/{id} ───────────────────────────────────────────────────
 
 export async function getSessionById(id: string): Promise<SessionDetail> {
-  return apiClient.get<SessionDetail>(`/api/sessions/${id}`).then((r) => r.data);
+  await ensureSeedData();
+  try {
+    return await apiClient.get<SessionDetail>(`/api/sessions/${id}`).then((r) => r.data);
+  } catch (error) {
+    const detail = seedSessionDetail(id);
+    if (!detail) throw error;
+    return detail;
+  }
 }
 
 // ─── GET /api/stats ───────────────────────────────────────────────────────────
@@ -211,19 +296,35 @@ export async function getStats(
   periodHours?: number | { readonly queryKey: readonly unknown[] },
 ): Promise<StatsResponse> {
   const hours = typeof periodHours === 'number' ? periodHours : undefined;
-  return apiClient
-    .get<StatsResponse>('/api/stats', {
-      params: hours ? { period_hours: hours } : undefined,
-    })
-    .then((r) => r.data);
+  await ensureSeedData();
+  try {
+    const data = await apiClient
+      .get<StatsResponse>('/api/stats', {
+        params: hours ? { period_hours: hours } : undefined,
+      })
+      .then((r) => r.data);
+    if ((data.total_checks ?? 0) > 0 || !hasSeed()) return data;
+    return seedStats();
+  } catch (error) {
+    if (!hasSeed()) throw error;
+    return seedStats();
+  }
 }
 
 // ─── GET /api/stats/timeline ──────────────────────────────────────────────────
 
 export async function getTimeline(hours: number): Promise<TimelineResponse> {
-  return apiClient
-    .get<TimelineResponse>('/api/stats/timeline', { params: { hours } })
-    .then((r) => r.data);
+  await ensureSeedData();
+  try {
+    const data = await apiClient
+      .get<TimelineResponse>('/api/stats/timeline', { params: { hours } })
+      .then((r) => r.data);
+    if ((data.items?.length ?? 0) > 0 || !hasSeed()) return data;
+    return seedTimeline();
+  } catch (error) {
+    if (!hasSeed()) throw error;
+    return seedTimeline();
+  }
 }
 
 // =============================================================================

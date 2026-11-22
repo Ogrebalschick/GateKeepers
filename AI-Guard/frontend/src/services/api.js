@@ -10,6 +10,7 @@
  */
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { SEED_LOADED_KEY, markSeedSkipped, persistSeedChecks, querySeedLogs, querySeedSessions, readStoredChecks, seedLogDetail, seedSessionDetail, seedStats, seedTimeline, } from '../data/seed-checks';
 // =============================================================================
 // Storage & utilities
 // =============================================================================
@@ -65,6 +66,43 @@ function attachResponseInterceptor(client) {
 }
 attachResponseInterceptor(apiClient);
 attachResponseInterceptor(mlClient);
+let seedPromise = null;
+/** Load demo journal/sessions once when the backend has no rows yet. */
+export function ensureSeedData() {
+    if (localStorage.getItem(SEED_LOADED_KEY) === 'true')
+        return Promise.resolve();
+    if (!localStorage.getItem('guard_token'))
+        return Promise.resolve();
+    if (!seedPromise) {
+        seedPromise = (async () => {
+            try {
+                const [logs, sessions] = await Promise.all([
+                    apiClient.get('/api/logs', { params: { page: 1, per_page: 1 } }).then((r) => r.data),
+                    apiClient.get('/api/sessions', { params: { page: 1, per_page: 1 } }).then((r) => r.data),
+                ]);
+                const hasData = (logs.total ?? logs.items?.length ?? 0) > 0 ||
+                    (sessions.total ?? sessions.items?.length ?? 0) > 0;
+                if (hasData) {
+                    markSeedSkipped();
+                    return;
+                }
+                persistSeedChecks();
+            }
+            catch (error) {
+                const status = error?.response?.status;
+                if (status === 401 || status === 403)
+                    return;
+                persistSeedChecks();
+            }
+        })().finally(() => {
+            seedPromise = null;
+        });
+    }
+    return seedPromise;
+}
+function hasSeed() {
+    return readStoredChecks().length > 0;
+}
 // =============================================================================
 // API functions
 // =============================================================================
@@ -99,11 +137,31 @@ export async function checkPrompt(payload) {
 }
 // ─── GET /api/logs ────────────────────────────────────────────────────────────
 export async function getLogs(params) {
-    return apiClient.get('/api/logs', { params }).then((r) => r.data);
+    await ensureSeedData();
+    try {
+        const data = await apiClient.get('/api/logs', { params }).then((r) => r.data);
+        if ((data.total ?? 0) > 0 || (data.items?.length ?? 0) > 0 || !hasSeed())
+            return data;
+        return querySeedLogs(params);
+    }
+    catch (error) {
+        if (!hasSeed())
+            throw error;
+        return querySeedLogs(params);
+    }
 }
 // ─── GET /api/logs/{id} ───────────────────────────────────────────────────────
 export async function getLogById(id) {
-    return apiClient.get(`/api/logs/${id}`).then((r) => r.data);
+    await ensureSeedData();
+    try {
+        return await apiClient.get(`/api/logs/${id}`).then((r) => r.data);
+    }
+    catch (error) {
+        const detail = seedLogDetail(id);
+        if (!detail)
+            throw error;
+        return detail;
+    }
 }
 // ─── GET /api/logs/export.csv ─────────────────────────────────────────────────
 export async function exportLogs(params) {
@@ -133,26 +191,68 @@ export async function createSession(data) {
 }
 // ─── GET /api/sessions ────────────────────────────────────────────────────────
 export async function getSessions(params) {
-    return apiClient.get('/api/sessions', { params }).then((r) => r.data);
+    await ensureSeedData();
+    try {
+        const data = await apiClient.get('/api/sessions', { params }).then((r) => r.data);
+        if ((data.total ?? 0) > 0 || (data.items?.length ?? 0) > 0 || !hasSeed())
+            return data;
+        return querySeedSessions(params);
+    }
+    catch (error) {
+        if (!hasSeed())
+            throw error;
+        return querySeedSessions(params);
+    }
 }
 // ─── GET /api/sessions/{id} ───────────────────────────────────────────────────
 export async function getSessionById(id) {
-    return apiClient.get(`/api/sessions/${id}`).then((r) => r.data);
+    await ensureSeedData();
+    try {
+        return await apiClient.get(`/api/sessions/${id}`).then((r) => r.data);
+    }
+    catch (error) {
+        const detail = seedSessionDetail(id);
+        if (!detail)
+            throw error;
+        return detail;
+    }
 }
 // ─── GET /api/stats ───────────────────────────────────────────────────────────
 export async function getStats(periodHours) {
     const hours = typeof periodHours === 'number' ? periodHours : undefined;
-    return apiClient
-        .get('/api/stats', {
-        params: hours ? { period_hours: hours } : undefined,
-    })
-        .then((r) => r.data);
+    await ensureSeedData();
+    try {
+        const data = await apiClient
+            .get('/api/stats', {
+            params: hours ? { period_hours: hours } : undefined,
+        })
+            .then((r) => r.data);
+        if ((data.total_checks ?? 0) > 0 || !hasSeed())
+            return data;
+        return seedStats();
+    }
+    catch (error) {
+        if (!hasSeed())
+            throw error;
+        return seedStats();
+    }
 }
 // ─── GET /api/stats/timeline ──────────────────────────────────────────────────
 export async function getTimeline(hours) {
-    return apiClient
-        .get('/api/stats/timeline', { params: { hours } })
-        .then((r) => r.data);
+    await ensureSeedData();
+    try {
+        const data = await apiClient
+            .get('/api/stats/timeline', { params: { hours } })
+            .then((r) => r.data);
+        if ((data.items?.length ?? 0) > 0 || !hasSeed())
+            return data;
+        return seedTimeline();
+    }
+    catch (error) {
+        if (!hasSeed())
+            throw error;
+        return seedTimeline();
+    }
 }
 // =============================================================================
 // Exports

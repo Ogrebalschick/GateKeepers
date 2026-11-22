@@ -15,7 +15,7 @@ import type { ComponentType } from 'react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { logout } from '../services/api';
+import { ensureSeedData, logout } from '../services/api';
 import { RoleBadge } from './RoleBadge';
 import { ThemeToggle } from './ThemeToggle';
 import { useTour } from './Tour';
@@ -78,12 +78,14 @@ export default function Layout() {
     if (running) setSidebarOpen(true);
   }, [running]);
 
-  const visibleItems =
-    running && isAuthenticated
-      ? NAV_ITEMS
-      : role
-        ? NAV_ITEMS.filter((item) => item.roles.includes(role))
-        : NAV_ITEMS.filter((item) => item.to === '/');
+  useEffect(() => {
+    if (!isAuthenticated || role === 'guest') return;
+    void ensureSeedData();
+  }, [isAuthenticated, role]);
+
+  const visibleItems = role
+    ? NAV_ITEMS.filter((item) => item.roles.includes(role))
+    : NAV_ITEMS.filter((item) => item.to === '/');
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -130,19 +132,21 @@ export default function Layout() {
               <RoleBadge role={role} />
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSidebarOpen(true);
-              startTour();
-            }}
-            className="mb-3 w-full flex items-center justify-center gap-2 px-3 py-2 text-sm
-                       border border-slate-600 text-slate-300 rounded-lg
-                       hover:border-blue-500 hover:text-blue-400 transition cursor-pointer"
-          >
-            <GraduationCap className="w-4 h-4" />
-            Пройти обучение
-          </button>
+          {isAuthenticated && role !== 'guest' && (
+            <button
+              type="button"
+              onClick={() => {
+                setSidebarOpen(true);
+                startTour();
+              }}
+              className="mb-3 w-full flex items-center justify-center gap-2 px-3 py-2 text-sm
+                         border border-slate-600 text-slate-300 rounded-lg
+                         hover:border-blue-500 hover:text-blue-400 transition cursor-pointer"
+            >
+              <GraduationCap className="w-4 h-4" />
+              Пройти обучение
+            </button>
+          )}
           <div className="mb-3">
             <ThemeToggle />
           </div>
