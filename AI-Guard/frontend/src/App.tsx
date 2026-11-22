@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { TourProvider } from './components/Tour';
 import ChatPage from './pages/ChatPage';
+import CheckPage from './pages/CheckPage';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import LogsPage from './pages/LogsPage';
@@ -30,12 +31,12 @@ export default function App() {
         <BrowserRouter>
           <TourProvider>
             <Routes>
-              {/* Login — без Layout */}
+              <Route path="/" element={<Navigate to="/check" replace />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/chat" element={<ChatPage />} />
 
-              {/* Все страницы — внутри Layout */}
               <Route element={<Layout />}>
-                <Route path="/" element={<ChatPage />} />
+                <Route path="/check" element={<CheckPage />} />
                 <Route
                   path="/dashboard"
                   element={
@@ -77,6 +78,8 @@ export default function App() {
                   }
                 />
               </Route>
+
+              <Route path="*" element={<Navigate to="/check" replace />} />
             </Routes>
           </TourProvider>
         </BrowserRouter>

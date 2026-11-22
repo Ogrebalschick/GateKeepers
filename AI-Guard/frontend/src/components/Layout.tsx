@@ -28,14 +28,12 @@ interface NavItem {
   tourId?: string;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { to: '/', Icon: Search, label: '💬 Чат', roles: ['admin', 'sre', 'developer'] },
+const ADMIN_NAV: NavItem[] = [
   {
-    to: '/dashboard',
-    Icon: BarChart3,
-    label: 'Дашборд',
-    roles: ['admin', 'sre'],
-    tourId: 'tour-dashboard-link',
+    to: '/check',
+    Icon: Search,
+    label: 'Проверить',
+    roles: ['admin', 'sre', 'developer'],
   },
   {
     to: '/logs',
@@ -57,6 +55,13 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Сессии',
     roles: ['admin', 'sre', 'developer'],
     tourId: 'tour-sessions-link',
+  },
+  {
+    to: '/dashboard',
+    Icon: BarChart3,
+    label: 'Дашборд',
+    roles: ['admin', 'sre'],
+    tourId: 'tour-dashboard-link',
   },
 ];
 
@@ -83,9 +88,9 @@ export default function Layout() {
     void ensureSeedData();
   }, [isAuthenticated, role]);
 
-  const visibleItems = role
-    ? NAV_ITEMS.filter((item) => item.roles.includes(role))
-    : NAV_ITEMS.filter((item) => item.to === '/');
+  const adminItems = role
+    ? ADMIN_NAV.filter((item) => item.roles.includes(role))
+    : ADMIN_NAV.filter((item) => item.to === '/check');
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -114,12 +119,26 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {visibleItems.map(({ to, Icon, label, tourId }) => (
-            <NavLink key={to} id={tourId} to={to} end={to === '/'} className={navClass}>
+          {adminItems.map(({ to, Icon, label, tourId }) => (
+            <NavLink key={to} id={tourId} to={to} className={navClass}>
               <Icon className="w-5 h-5 shrink-0" />
               <span>{label}</span>
             </NavLink>
           ))}
+          <div className="mt-3 border-t border-slate-700 pt-3">
+            <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Инструменты
+            </p>
+            <a
+              href="/chat"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm text-white/90 hover:bg-slate-800 hover:text-white"
+            >
+              <MessageSquare className="w-5 h-5 shrink-0" />
+              <span>Чат</span>
+            </a>
+          </div>
         </nav>
 
         <div className="border-t border-gray-700 dark:border-slate-700 p-4 mt-auto">
@@ -155,6 +174,7 @@ export default function Layout() {
               type="button"
               onClick={() => {
                 logout();
+                window.location.replace('/login');
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
             >

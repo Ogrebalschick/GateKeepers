@@ -54,7 +54,7 @@ export default function LoginPage() {
             localStorage.setItem('guard_role', data.role);
             localStorage.setItem('guard_username', username.trim());
             toast.success(`Добро пожаловать, ${username.trim()}!`);
-            const redirect = searchParams.get('redirect') ?? '/';
+            const redirect = searchParams.get('redirect') ?? '/check';
             navigate(redirect, { replace: true });
         }
         catch (err) {

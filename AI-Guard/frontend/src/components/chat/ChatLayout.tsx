@@ -9,7 +9,7 @@ export default function ChatLayout({ sidebar, children }: ChatLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="relative -m-6 flex h-[calc(100vh-3.25rem)] min-h-0 overflow-hidden md:h-[calc(100vh-0px)]">
+    <div className="relative flex h-[calc(100vh-60px)] min-h-0 overflow-hidden">
       {mobileOpen && (
         <button
           type="button"

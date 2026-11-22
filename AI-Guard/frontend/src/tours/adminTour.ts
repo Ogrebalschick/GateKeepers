@@ -22,7 +22,7 @@ const TOUR_STEPS: TourStepInput[] = [
     content:
       'Это система безопасности для проверки промптов, отправляемых к ИИ-ассистентам. Сейчас мы пройдём по всем ключевым функциям. Нажмите «Далее» для начала.',
     placement: 'center',
-    route: '/',
+    route: '/check',
     roles: AUTH_ROLES,
   },
   {
@@ -31,7 +31,7 @@ const TOUR_STEPS: TourStepInput[] = [
     content:
       'Здесь вы вводите промпт пользователя, который хотите проверить. ИИ-Сторож проанализирует его и решит: разрешить, заблокировать или запросить подтверждение.',
     placement: 'right',
-    route: '/',
+    route: '/check',
     roles: AUTH_ROLES,
   },
   {
@@ -40,7 +40,7 @@ const TOUR_STEPS: TourStepInput[] = [
     content:
       'Выберите роль, от имени которой отправляется запрос. Разные роли имеют разные права: admin — полный доступ, sre — просмотр, developer — ограниченный.',
     placement: 'right',
-    route: '/',
+    route: '/check',
     roles: AUTH_ROLES,
   },
   {
@@ -49,7 +49,7 @@ const TOUR_STEPS: TourStepInput[] = [
     content:
       'Нажмите эту кнопку, чтобы отправить промпт на проверку. ИИ-Сторож оценит запрос по политике безопасности и вернёт решение.',
     placement: 'top',
-    route: '/',
+    route: '/check',
     roles: AUTH_ROLES,
   },
   {
@@ -58,7 +58,7 @@ const TOUR_STEPS: TourStepInput[] = [
     content:
       'Здесь отображается решение: «Разрешено» (зелёный), «Заблокировано» (красный) или «Требует подтверждения» (жёлтый). Также показаны категория риска, объяснение и задержка обработки.',
     placement: 'left',
-    route: '/',
+    route: '/check',
     roles: AUTH_ROLES,
   },
   {
@@ -67,7 +67,7 @@ const TOUR_STEPS: TourStepInput[] = [
     content:
       'Если запрос разрешён, здесь появится ответ ИИ-ассистента. Если заблокирован — ассистент не получит запрос.',
     placement: 'left',
-    route: '/',
+    route: '/check',
     roles: AUTH_ROLES,
   },
   {

@@ -61,7 +61,7 @@ export default function LoginPage() {
 
       toast.success(`Добро пожаловать, ${username.trim()}!`);
 
-      const redirect = searchParams.get('redirect') ?? '/';
+      const redirect = searchParams.get('redirect') ?? '/check';
       navigate(redirect, { replace: true });
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;

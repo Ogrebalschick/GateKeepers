@@ -62,7 +62,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(TOUR_PROMPTED_KEY, '1');
     setRun(false);
     setShowPrompt(false);
-    const back = originPath.current || '/';
+    const back = originPath.current || '/check';
     if (window.location.pathname !== back) navigate(back);
   }, [navigate]);
 
@@ -74,8 +74,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
     restarting.current = true;
     setRun(false);
     setTourKey((key) => key + 1);
-    const wait = location.pathname === '/' ? 0 : 400;
-    if (location.pathname !== '/') navigate('/');
+    const wait = location.pathname === '/check' ? 0 : 400;
+    if (location.pathname !== '/check') navigate('/check');
     window.setTimeout(() => {
       setRun(true);
       window.setTimeout(() => {
