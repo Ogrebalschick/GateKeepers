@@ -1,21 +1,52 @@
+import { useQuery } from '@tanstack/react-query';
 import { MessageSquare, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate } from 'react-router-dom';
 import ChatInput from '../components/chat/ChatInput';
 import ChatLayout from '../components/chat/ChatLayout';
+import MessageList from '../components/chat/MessageList';
 import NewChatModal from '../components/chat/NewChatModal';
 import SessionSidebar from '../components/chat/SessionSidebar';
 import { RoleBadge } from '../components/RoleBadge';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { logout } from '../services/api';
+import { getSessionById, logout } from '../services/api';
+
+function selectedStorageKey(userId: string): string {
+  return `chat-selected-session:${userId}`;
+}
+
+function isSessionNotFound(error: unknown): boolean {
+  const response = (error as { response?: { status?: number; data?: { error?: string } } })
+    ?.response;
+  return response?.status === 404 || response?.data?.error === 'session_not_found';
+}
 
 export default function ChatPage() {
   const navigate = useNavigate();
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const { userId, username, role, isAuthenticated } = useCurrentUser();
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(() =>
+    userId ? sessionStorage.getItem(selectedStorageKey(userId)) : null,
+  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { username, role, isAuthenticated } = useCurrentUser();
+  const missingToastFor = useRef<string | null>(null);
+
+  function selectSession(id: string | null) {
+    setSelectedSessionId(id);
+    if (!userId) return;
+    const key = selectedStorageKey(userId);
+    if (id) sessionStorage.setItem(key, id);
+    else sessionStorage.removeItem(key);
+  }
+
+  const sessionQuery = useQuery({
+    queryKey: ['session', selectedSessionId],
+    queryFn: () => getSessionById(selectedSessionId!),
+    enabled: Boolean(selectedSessionId) && isAuthenticated,
+    retry: (failureCount, error) => !isSessionNotFound(error) && failureCount < 1,
+  });
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -32,6 +63,16 @@ export default function ChatPage() {
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!selectedSessionId || !sessionQuery.isError || !isSessionNotFound(sessionQuery.error)) {
+      return;
+    }
+    if (missingToastFor.current === selectedSessionId) return;
+    missingToastFor.current = selectedSessionId;
+    toast.error('Чат не найден');
+    selectSession(null);
+  }, [selectedSessionId, sessionQuery.isError, sessionQuery.error, userId]);
 
   return (
     <div className="flex h-screen flex-col bg-gray-50 text-gray-900 dark:bg-slate-900 dark:text-gray-100">
@@ -97,7 +138,7 @@ export default function ChatPage() {
         sidebar={
           <SessionSidebar
             selectedId={selectedSessionId}
-            onSelect={setSelectedSessionId}
+            onSelect={selectSession}
             onCreateClick={() => {
               if (!isAuthenticated) {
                 navigate('/login?redirect=%2Fchat');
@@ -109,12 +150,21 @@ export default function ChatPage() {
         }
       >
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
-            <MessageSquare className="mb-3 h-12 w-12 text-gray-300 dark:text-slate-500" />
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              {selectedSessionId ? selectedSessionId : 'Напишите DevOps-ассистенту'}
-            </p>
-          </div>
+          {selectedSessionId ? (
+            <MessageList
+              session={sessionQuery.data}
+              isLoading={sessionQuery.isLoading}
+              isError={sessionQuery.isError && !isSessionNotFound(sessionQuery.error)}
+              fullTextByCheckId={{}}
+            />
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
+              <MessageSquare className="mb-3 h-12 w-12 text-gray-300 dark:text-slate-500" />
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Напишите DevOps-ассистенту
+              </p>
+            </div>
+          )}
           <ChatInput />
         </div>
       </ChatLayout>
@@ -123,6 +173,7 @@ export default function ChatPage() {
         onClose={() => setIsCreateModalOpen(false)}
         onCreated={(sessionId) => {
           setSelectedSessionId(sessionId);
+          if (userId) sessionStorage.setItem(selectedStorageKey(userId), sessionId);
           setIsCreateModalOpen(false);
         }}
       />
