@@ -5,6 +5,7 @@ import type { SessionMessage } from '../../types';
 interface MessageBubbleProps {
   message: SessionMessage;
   fullText?: string;
+  agentText?: string;
 }
 
 function formatTime(value: string): string {
@@ -18,7 +19,7 @@ function formatTime(value: string): string {
   });
 }
 
-export default function MessageBubble({ message, fullText }: MessageBubbleProps) {
+export default function MessageBubble({ message, fullText, agentText }: MessageBubbleProps) {
   const text = fullText ?? message.user_prompt;
 
   return (
@@ -43,6 +44,14 @@ export default function MessageBubble({ message, fullText }: MessageBubbleProps)
           </div>
         )}
       </div>
+      {agentText && (
+        <div className="rounded-lg bg-blue-50 px-3 py-2 dark:bg-slate-700">
+          <p className="text-xs font-medium text-gray-500 dark:text-slate-400">DevOps-ассистент</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">
+            {agentText}
+          </p>
+        </div>
+      )}
     </article>
   );
 }

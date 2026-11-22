@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { useRef } from 'react';
-import type { SessionDetail } from '../../types';
+import type { SessionDetail, SessionMessage } from '../../types';
+import { getMockAgentResponse } from '../../utils/mockAgentResponses';
 import MessageBubble from './MessageBubble';
 
 interface MessageListProps {
@@ -8,10 +9,16 @@ interface MessageListProps {
   isLoading: boolean;
   isError: boolean;
   fullTextByCheckId: Record<string, string>;
+  pendingMessages?: SessionMessage[];
 }
 
 function statusLabel(status: SessionDetail['status']): string {
   return status === 'active' ? 'активна' : 'закрыта';
+}
+
+function agentTextFor(message: SessionMessage, fullText: string | undefined): string | undefined {
+  if (message.decision !== 'allow') return undefined;
+  return getMockAgentResponse(fullText ?? message.user_prompt);
 }
 
 export default function MessageList({
@@ -19,8 +26,15 @@ export default function MessageList({
   isLoading,
   isError,
   fullTextByCheckId,
+  pendingMessages = [],
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const serverMessages = session?.messages ?? [];
+  const serverIds = new Set(serverMessages.map((message) => message.check_id));
+  const messages = [
+    ...serverMessages,
+    ...pendingMessages.filter((message) => !serverIds.has(message.check_id)),
+  ];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -47,21 +61,25 @@ export default function MessageList({
           </p>
         )}
 
-        {!isLoading && !isError && session && session.messages.length === 0 && (
+        {!isLoading && !isError && session && messages.length === 0 && (
           <p className="text-center text-sm text-gray-500 dark:text-slate-400">
             Напишите первое сообщение. Сторож проверит его до DevOps-агента
           </p>
         )}
 
-        {!isLoading && !isError && session && session.messages.length > 0 && (
+        {!isLoading && !isError && messages.length > 0 && (
           <div className="space-y-4">
-            {session.messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                fullText={fullTextByCheckId[message.check_id]}
-              />
-            ))}
+            {messages.map((message) => {
+              const fullText = fullTextByCheckId[message.check_id];
+              return (
+                <MessageBubble
+                  key={message.check_id}
+                  message={message}
+                  fullText={fullText}
+                  agentText={agentTextFor(message, fullText)}
+                />
+              );
+            })}
           </div>
         )}
       </div>
