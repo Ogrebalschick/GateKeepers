@@ -2,11 +2,16 @@ import DecisionBadge from '../DecisionBadge';
 import RiskBadge from '../RiskBadge';
 import type { SessionMessage } from '../../types';
 
+export type ChatConfirmChoice = 'approved' | 'rejected' | 'already';
+
 interface MessageBubbleProps {
   message: SessionMessage;
   fullText?: string;
   attachmentNames?: string[];
   agentText?: string;
+  confirmChoice?: ChatConfirmChoice;
+  confirmPending?: boolean;
+  onConfirm?: (decision: 'approved' | 'rejected') => void;
 }
 
 function formatTime(value: string): string {
@@ -25,8 +30,13 @@ export default function MessageBubble({
   fullText,
   attachmentNames = [],
   agentText,
+  confirmChoice,
+  confirmPending = false,
+  onConfirm,
 }: MessageBubbleProps) {
   const text = fullText ?? message.user_prompt;
+  const isConfirm = message.decision === 'confirm';
+  const awaitingConfirm = isConfirm && !confirmChoice;
 
   return (
     <article className="space-y-2">
@@ -39,7 +49,13 @@ export default function MessageBubble({
           ))}
         </ul>
       )}
-      <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+      <div
+        className={
+          isConfirm
+            ? 'rounded-lg border-2 border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20'
+            : 'rounded-lg border border-gray-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800'
+        }
+      >
         <div className="flex flex-wrap items-center gap-2">
           <DecisionBadge decision={message.decision} size="sm" />
           <RiskBadge riskLevel={message.risk_level} size="sm" />
@@ -56,7 +72,35 @@ export default function MessageBubble({
             ⚠️ Многошаговая атака обнаружена
           </div>
         )}
+        {awaitingConfirm && (
+          <div className="mt-3 border-t border-yellow-200 pt-3 dark:border-yellow-800">
+            <p className="text-sm text-gray-800 dark:text-gray-100">
+              Запрос не передан DevOps-агенту
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={confirmPending}
+                onClick={() => onConfirm?.('approved')}
+                className="cursor-pointer rounded-lg bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                ✅ Подтвердить
+              </button>
+              <button
+                type="button"
+                disabled={confirmPending}
+                onClick={() => onConfirm?.('rejected')}
+                className="cursor-pointer rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                ❌ Отменить
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+      {confirmChoice === 'rejected' && (
+        <p className="text-sm text-gray-500 dark:text-slate-400">Отменено</p>
+      )}
       {agentText && (
         <div className="rounded-lg bg-blue-50 px-3 py-2 dark:bg-slate-700">
           <p className="text-xs font-medium text-gray-500 dark:text-slate-400">DevOps-ассистент</p>

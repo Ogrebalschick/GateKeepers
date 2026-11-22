@@ -6,12 +6,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import ChatInput, { type ChatAttachment } from '../components/chat/ChatInput';
 import ChatLayout from '../components/chat/ChatLayout';
 import MessageList, { type ChatCheckDraft } from '../components/chat/MessageList';
+import { type ChatConfirmChoice } from '../components/chat/MessageBubble';
 import NewChatModal from '../components/chat/NewChatModal';
 import SessionSidebar from '../components/chat/SessionSidebar';
 import { RoleBadge } from '../components/RoleBadge';
 import { DEVOPS_SYSTEM_PROMPT } from '../constants/systemPrompts';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { checkPrompt, getSessionById, logout } from '../services/api';
+import { checkPrompt, confirmAction, getSessionById, logout } from '../services/api';
 import type { CheckContextMessage, SessionMessage } from '../types';
 
 function selectedStorageKey(userId: string): string {
@@ -55,6 +56,8 @@ export default function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [draftByCheckId, setDraftByCheckId] = useState<Record<string, ChatCheckDraft>>({});
+  const [confirmByCheckId, setConfirmByCheckId] = useState<Record<string, ChatConfirmChoice>>({});
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [localTurns, setLocalTurns] = useState<LocalTurn[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const missingToastFor = useRef<string | null>(null);
@@ -150,6 +153,37 @@ export default function ChatPage() {
       return false;
     } finally {
       setPending(false);
+    }
+  }
+
+  async function handleConfirm(checkId: string, decision: 'approved' | 'rejected') {
+    if (!localStorage.getItem('guard_token')) {
+      toast.error('Войдите, чтобы подтвердить');
+      return;
+    }
+    setConfirmingId(checkId);
+    try {
+      await confirmAction({
+        check_id: checkId,
+        user_decision: decision,
+        user_id: userId,
+        comment: null,
+      });
+      setConfirmByCheckId((prev) => ({ ...prev, [checkId]: decision }));
+      toast.success(decision === 'approved' ? 'Действие подтверждено' : 'Запрос отменён');
+    } catch (err: unknown) {
+      const response = (err as { response?: { status?: number; data?: { error?: string } } })
+        ?.response;
+      if (response?.status === 401) {
+        toast.error('Войдите, чтобы подтвердить');
+      } else if (response?.status === 409 || response?.data?.error === 'already_confirmed') {
+        toast.error('Уже подтверждено');
+        setConfirmByCheckId((prev) => ({ ...prev, [checkId]: prev[checkId] ?? 'already' }));
+      } else {
+        toast.error('Не удалось подтвердить действие');
+      }
+    } finally {
+      setConfirmingId(null);
     }
   }
 
@@ -266,6 +300,9 @@ export default function ChatPage() {
               )}
               draftByCheckId={draftByCheckId}
               pendingMessages={pendingMessages}
+              confirmByCheckId={confirmByCheckId}
+              confirmingId={confirmingId}
+              onConfirm={(checkId, decision) => void handleConfirm(checkId, decision)}
             />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">

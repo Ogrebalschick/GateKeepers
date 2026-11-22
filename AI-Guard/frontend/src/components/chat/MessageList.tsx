@@ -2,7 +2,7 @@ import { Loader2 } from 'lucide-react';
 import { useRef } from 'react';
 import type { SessionDetail, SessionMessage } from '../../types';
 import { getMockAgentResponse } from '../../utils/mockAgentResponses';
-import MessageBubble from './MessageBubble';
+import MessageBubble, { type ChatConfirmChoice } from './MessageBubble';
 
 export interface ChatCheckDraft {
   text: string;
@@ -15,15 +15,24 @@ interface MessageListProps {
   isError: boolean;
   draftByCheckId: Record<string, ChatCheckDraft>;
   pendingMessages?: SessionMessage[];
+  confirmByCheckId: Record<string, ChatConfirmChoice>;
+  confirmingId: string | null;
+  onConfirm: (checkId: string, decision: 'approved' | 'rejected') => void;
 }
 
 function statusLabel(status: SessionDetail['status']): string {
   return status === 'active' ? 'активна' : 'закрыта';
 }
 
-function agentTextFor(message: SessionMessage, fullText: string | undefined): string | undefined {
-  if (message.decision !== 'allow') return undefined;
-  return getMockAgentResponse(fullText ?? message.user_prompt);
+function agentTextFor(
+  message: SessionMessage,
+  fullText: string | undefined,
+  choice: ChatConfirmChoice | undefined,
+): string | undefined {
+  const prompt = fullText ?? message.user_prompt;
+  if (message.decision === 'allow') return getMockAgentResponse(prompt);
+  if (message.decision === 'confirm' && choice === 'approved') return getMockAgentResponse(prompt);
+  return undefined;
 }
 
 export default function MessageList({
@@ -32,6 +41,9 @@ export default function MessageList({
   isError,
   draftByCheckId,
   pendingMessages = [],
+  confirmByCheckId,
+  confirmingId,
+  onConfirm,
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const serverMessages = session?.messages ?? [];
@@ -76,13 +88,17 @@ export default function MessageList({
           <div className="space-y-4">
             {messages.map((message) => {
               const draft = draftByCheckId[message.check_id];
+              const choice = confirmByCheckId[message.check_id];
               return (
                 <MessageBubble
                   key={message.check_id}
                   message={message}
                   fullText={draft?.text}
                   attachmentNames={draft?.attachmentNames}
-                  agentText={agentTextFor(message, draft?.text)}
+                  agentText={agentTextFor(message, draft?.text, choice)}
+                  confirmChoice={choice}
+                  confirmPending={confirmingId === message.check_id}
+                  onConfirm={(decision) => onConfirm(message.check_id, decision)}
                 />
               );
             })}
