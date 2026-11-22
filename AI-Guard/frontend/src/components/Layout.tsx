@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { ensureSeedData, logout } from '../services/api';
 import { RoleBadge } from './RoleBadge';
@@ -76,6 +76,7 @@ function navClass({ isActive }: { isActive: boolean }) {
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { username, role, isAuthenticated } = useCurrentUser();
   const { startTour, running } = useTour();
 
@@ -173,8 +174,7 @@ export default function Layout() {
             <button
               type="button"
               onClick={() => {
-                logout();
-                window.location.replace('/login');
+                logout(location.pathname);
               }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
             >

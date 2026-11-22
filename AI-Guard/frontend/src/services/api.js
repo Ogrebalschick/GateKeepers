@@ -20,9 +20,13 @@ export function getAuthHeaders() {
     const token = localStorage.getItem('guard_token');
     return token ? { Authorization: `Bearer ${token}` } : {};
 }
-/** Clear session and return to the public home page. */
-export function logout() {
+/** Clear session. Without redirectTo, return to the public home page. */
+export function logout(redirectTo) {
     GUARD_KEYS.forEach((k) => localStorage.removeItem(k));
+    if (redirectTo) {
+        window.location.href = `/login?redirect=${encodeURIComponent(redirectTo)}`;
+        return;
+    }
     window.location.href = '/';
 }
 function clearSession() {

@@ -1,4 +1,5 @@
 import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2, Shield } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -29,8 +30,14 @@ const DEMO_ACCOUNTS = [
   },
 ] as const;
 
+function safeInternalPath(value: string | null): string {
+  if (value && value.startsWith('/') && !value.startsWith('//')) return value;
+  return '/check';
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useCurrentUser();
 
@@ -61,8 +68,8 @@ export default function LoginPage() {
 
       toast.success(`Добро пожаловать, ${username.trim()}!`);
 
-      const redirect = searchParams.get('redirect') ?? '/check';
-      navigate(redirect, { replace: true });
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      navigate(safeInternalPath(searchParams.get('redirect')), { replace: true });
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401) {

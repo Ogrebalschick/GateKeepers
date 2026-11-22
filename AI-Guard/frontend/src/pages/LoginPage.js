@@ -1,10 +1,16 @@
 import { Fragment as _Fragment, jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2, Shield } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { login } from '../services/api';
+function safeInternalPath(value) {
+    if (value && value.startsWith('/') && !value.startsWith('//'))
+        return value;
+    return '/check';
+}
 const DEMO_ACCOUNTS = [
     {
         username: 'admin',
@@ -30,6 +36,7 @@ const DEMO_ACCOUNTS = [
 ];
 export default function LoginPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [searchParams] = useSearchParams();
     const { isAuthenticated } = useCurrentUser();
     const [username, setUsername] = useState('');
@@ -54,8 +61,8 @@ export default function LoginPage() {
             localStorage.setItem('guard_role', data.role);
             localStorage.setItem('guard_username', username.trim());
             toast.success(`Добро пожаловать, ${username.trim()}!`);
-            const redirect = searchParams.get('redirect') ?? '/check';
-            navigate(redirect, { replace: true });
+            await queryClient.invalidateQueries({ queryKey: ['sessions'] });
+            navigate(safeInternalPath(searchParams.get('redirect')), { replace: true });
         }
         catch (err) {
             const status = err?.response?.status;

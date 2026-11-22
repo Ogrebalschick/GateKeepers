@@ -57,9 +57,13 @@ export function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** Clear session and return to the public home page. */
-export function logout(): void {
+/** Clear session. Without redirectTo, return to the public home page. */
+export function logout(redirectTo?: string): void {
   GUARD_KEYS.forEach((k) => localStorage.removeItem(k));
+  if (redirectTo) {
+    window.location.href = `/login?redirect=${encodeURIComponent(redirectTo)}`;
+    return;
+  }
   window.location.href = '/';
 }
 
