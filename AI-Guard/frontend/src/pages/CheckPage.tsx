@@ -16,7 +16,7 @@ import { Link } from 'react-router-dom';
 import { DecisionBadge, RiskBadge } from '../components';
 import DevOpsAgentMock, { type AgentStatus } from '../components/DevOpsAgentMock';
 import { DEVOPS_SYSTEM_PROMPT } from '../constants/systemPrompts';
-import { checkPrompt, confirmAction, getSessions } from '../services/api';
+import { checkPrompt, confirmAction, createSession, getSessions } from '../services/api';
 import type { CheckResponse, UserRole } from '../types';
 import { getMockAgentResponse } from '../utils/mockAgentResponses';
 
@@ -242,8 +242,22 @@ export default function CheckPage() {
             ]
           : [];
 
-      const sessionId = sessionChoice === '__new__' ? crypto.randomUUID() : sessionChoice || null;
-      if (sessionId && sessionChoice === '__new__') setSessionChoice(sessionId);
+      let sessionId: string | null = null;
+      if (localStorage.getItem('guard_token')) {
+        if (sessionChoice === '__new__') {
+          const created = await createSession({
+            user_id: localStorage.getItem('guard_user_id'),
+            user_role: localStorage.getItem('guard_role'),
+            max_requests: 100,
+            metadata: null,
+          });
+          sessionId = created.session_id;
+          setSessionChoice(sessionId);
+        } else if (sessionChoice) {
+          const picked = (sessions?.items ?? []).find((item) => item.session_id === sessionChoice);
+          if (picked?.status !== 'closed') sessionId = sessionChoice;
+        }
+      }
 
       const data = await checkPrompt({
         user_prompt: prompt.trim(),
@@ -373,6 +387,7 @@ export default function CheckPage() {
             </select>
           </div>
 
+          {hasToken && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
               Сессия
@@ -398,7 +413,11 @@ export default function CheckPage() {
                   </option>
                 )}
               {(sessions?.items ?? []).map((item) => (
-                <option key={item.session_id} value={item.session_id}>
+                <option
+                  key={item.session_id}
+                  value={item.session_id}
+                  disabled={item.status === 'closed'}
+                >
                   {item.session_id.length > 8
                     ? `${item.session_id.slice(0, 8)}...`
                     : item.session_id}
@@ -414,6 +433,7 @@ export default function CheckPage() {
               </Link>
             )}
           </div>
+          )}
 
           {/* User name (optional) */}
           <div>

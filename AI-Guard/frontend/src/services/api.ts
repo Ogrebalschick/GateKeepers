@@ -536,89 +536,20 @@ export async function confirmAction(data: ConfirmRequest): Promise<ConfirmRespon
 
 // ─── POST /api/sessions ───────────────────────────────────────────────────────
 
-/**
- * Real: return apiClient.post<Session>('/api/sessions', data).then(r => r.data);
- */
 export async function createSession(data: SessionCreateRequest): Promise<Session> {
-  requireAuth();
-
-  const session: Session = {
-    session_id: crypto.randomUUID(),
-    created_at: new Date().toISOString(),
-    user_id: data.user_id,
-    user_role: data.user_role,
-    max_requests: data.max_requests ?? 100,
-    request_count: 0,
-    status: 'active',
-    last_activity_at: new Date().toISOString(),
-    threat_flags: [],
-  };
-
-  MOCK_SESSIONS.push(session);
-  persistMocks();
-  return mockDelay(300, { ...session });
+  return apiClient.post<Session>('/api/sessions', data).then((r) => r.data);
 }
 
 // ─── GET /api/sessions ────────────────────────────────────────────────────────
 
-/**
- * Real: return apiClient.get<SessionsResponse>('/api/sessions', { params }).then(r => r.data);
- */
 export async function getSessions(params?: SessionsParams): Promise<SessionsResponse> {
-  requireAuth();
-
-  const role = localStorage.getItem('guard_role');
-  const userId = localStorage.getItem('guard_user_id');
-
-  let items = [...MOCK_SESSIONS];
-  if (role === 'developer') items = items.filter((s) => s.user_id === userId);
-  if (params?.status) items = items.filter((s) => s.status === params.status);
-  if (params?.user_id) items = items.filter((s) => s.user_id === params.user_id);
-
-  const page = params?.page ?? 1;
-  const perPage = params?.per_page ?? 20;
-  const total = items.length;
-  const start = (page - 1) * perPage;
-
-  return mockDelay(300, {
-    items: items.slice(start, start + perPage),
-    total,
-    page,
-    per_page: perPage,
-  });
+  return apiClient.get<SessionsResponse>('/api/sessions', { params }).then((r) => r.data);
 }
 
 // ─── GET /api/sessions/{id} ───────────────────────────────────────────────────
 
-/**
- * Real: return apiClient.get<SessionDetail>(`/api/sessions/${id}`).then(r => r.data);
- */
 export async function getSessionById(id: string): Promise<SessionDetail> {
-  requireAuth();
-
-  const session = MOCK_SESSIONS.find((s) => s.session_id === id);
-  if (!session) {
-    return Promise.reject(
-      Object.assign(new Error('session_not_found'), {
-        response: { status: 404, data: { error: 'session_not_found' } },
-      }),
-    );
-  }
-
-  const messages = MOCK_LOGS.filter((l) => l.session_id === id).map((l, idx) => ({
-    id: idx + 1,
-    check_id: l.check_id,
-    created_at: l.created_at,
-    user_prompt: l.user_prompt.slice(0, 300),
-    decision: l.decision,
-    risk_level: l.risk_level,
-    risk_category: l.risk_category,
-    explanation: l.explanation,
-    latency_ms: l.latency_ms,
-    is_multi_step_attack: MULTI_STEP_CHECKS.has(l.check_id),
-  }));
-
-  return mockDelay(300, { ...session, messages });
+  return apiClient.get<SessionDetail>(`/api/sessions/${id}`).then((r) => r.data);
 }
 
 // ─── GET /api/stats ───────────────────────────────────────────────────────────
