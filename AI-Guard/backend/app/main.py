@@ -10,6 +10,7 @@ from typing import Any
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException, Request
+from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import func, select
@@ -23,7 +24,13 @@ from .auth import (
 from .config import get_settings
 from .database import SessionLocal, init_db
 from .db_models import Check, PolicyVersion
-from .policy import policy_store
+from .policy import (
+    PolicySchemaError,
+    PolicyYAMLError,
+    normalize_policy_yaml,
+    parse_policy_for_save,
+    policy_store,
+)
 from .schemas import (
     DECISIONS,
     RISK_CATEGORIES,
@@ -621,14 +628,56 @@ async def get_policy(user: dict = Depends(require_roles("admin", "sre"))):
 
 
 
+async def _insert_policy_version(
+    content_yaml: str,
+    user_id: str,
+    comment: str | None,
+) -> tuple[int, str, str]:
+    """next_version берётся из max(version) в этой же транзакции."""
+    for _attempt in range(3):
+        try:
+            async with SessionLocal() as db:
+                (
+                    await db.execute(select(PolicyVersion).with_for_update())
+                ).scalars().all()
+                current_max = await db.scalar(select(func.max(PolicyVersion.version)))
+                next_version = int(current_max or 0) + 1
+                normalized = normalize_policy_yaml(content_yaml, next_version)
+                active = (
+                    await db.execute(
+                        select(PolicyVersion).where(PolicyVersion.is_active.is_(True))
+                    )
+                ).scalars().all()
+                for row in active:
+                    row.is_active = False
+                created = PolicyVersion(
+                    version=next_version,
+                    content_yaml=normalized,
+                    updated_by=user_id,
+                    comment=comment,
+                    is_active=True,
+                )
+                db.add(created)
+                await db.commit()
+                await db.refresh(created)
+                updated_at = (
+                    created.created_at.isoformat()
+                    if created.created_at
+                    else datetime.now(timezone.utc).isoformat()
+                )
+                return next_version, normalized, updated_at
+        except IntegrityError:
+            continue
+    raise HTTPException(409, {"error": "version_conflict"})
+
+
 @app.put("/api/policy")
 async def update_policy(
     req: PolicyUpdateRequest,
     user: dict = Depends(require_roles("admin")),
 ):
     try:
-        data = policy_store.parse(req.content_yaml)
-
+        parse_policy_for_save(req.content_yaml)
     except PolicyYAMLError as exc:
         raise HTTPException(
             400,
@@ -637,7 +686,6 @@ async def update_policy(
                 "detail": str(exc),
             },
         )
-
     except PolicySchemaError as exc:
         raise HTTPException(
             422,
@@ -647,57 +695,22 @@ async def update_policy(
             },
         )
 
-    new_version = data.get("version", policy_store.version + 1)
-
-    if (
-        isinstance(new_version, bool)
-        or not isinstance(new_version, int)
-        or new_version < 1
-    ):
-        raise HTTPException(
-            422,
-            {
-                "error": "schema_violation",
-                "detail": "Policy version must be a positive integer",
-            },
-        )
-
-    async with SessionLocal() as db:
-        active = (
-            await db.execute(
-                select(PolicyVersion).where(
-                    PolicyVersion.is_active.is_(True)
-                )
-            )
-        ).scalars().all()
-
-        for pv in active:
-            pv.is_active = False
-
-        db.add(
-            PolicyVersion(
-                version=new_version,
-                content_yaml=req.content_yaml,
-                updated_by=user["user_id"],
-                comment=req.comment,
-                is_active=True,
-            )
-        )
-
-        await db.commit()
-
-    policy_store.apply(req.content_yaml)
+    next_version, normalized, updated_at = await _insert_policy_version(
+        req.content_yaml,
+        user["user_id"],
+        req.comment,
+    )
+    policy_store.apply(normalized)
     reload_ok = await _send_policy_to_ml(
         {
-            "content_yaml": req.content_yaml,
-            "version": new_version,
+            "content_yaml": normalized,
+            "version": next_version,
         }
     )
-
     return {
-        "version": new_version,
-        "content_yaml": req.content_yaml,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "version": next_version,
+        "content_yaml": normalized,
+        "updated_at": updated_at,
         "updated_by": user["user_id"],
         "comment": req.comment,
         "reload_status": "ok" if reload_ok else "failed",

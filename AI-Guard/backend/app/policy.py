@@ -1,4 +1,5 @@
 
+import re
 import threading
 from pathlib import Path
 from typing import Any
@@ -184,6 +185,32 @@ def validate_policy(data: Any) -> dict[str, Any]:
         )
 
     return data
+
+
+_TOP_LEVEL_VERSION = re.compile(r"(?m)^version:[^\n]*")
+
+
+def normalize_policy_yaml(content: str, next_version: int) -> str:
+    """Подставляет top-level version, не пересобирая документ."""
+    replacement = f"version: {next_version}"
+    if _TOP_LEVEL_VERSION.search(content):
+        return _TOP_LEVEL_VERSION.sub(replacement, content, count=1)
+    if content.startswith("\n"):
+        return replacement + content
+    return replacement + "\n" + content
+
+
+def parse_policy_for_save(content: str) -> dict[str, Any]:
+    """Проверяет схему. Номер version из текста на нумерацию не влияет."""
+    try:
+        data = yaml.safe_load(content)
+    except yaml.YAMLError as exc:
+        raise PolicyYAMLError(str(exc)) from exc
+    if not isinstance(data, dict):
+        raise PolicySchemaError("Policy root must be a YAML mapping")
+    probe = dict(data)
+    probe["version"] = 1
+    return validate_policy(probe)
 
 
 class PolicyStore:
