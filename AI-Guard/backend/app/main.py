@@ -2,14 +2,15 @@
 import csv
 import io
 import json
+import math
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -956,22 +957,143 @@ async def get_session(
 
 
 # ---------------------- Stats ----------------------
+_STAT_DECISIONS = ("allow", "confirm", "block")
+_STAT_RISK_LEVELS = ("none", "low", "medium", "high", "critical")
+_STAT_LAYERS = ("layer0", "layer1", "layer2")
+
+
+def _utc_naive_now() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _as_utc_naive(value: datetime) -> datetime:
+    if value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
+
+
+def _hour_floor(value: datetime) -> datetime:
+    value = _as_utc_naive(value)
+    return value.replace(minute=0, second=0, microsecond=0)
+
+
+def _hour_iso(value: datetime) -> str:
+    return value.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _percentile(values: list[float], ratio: float) -> float:
+    if not values:
+        return 0.0
+    ordered = sorted(values)
+    index = min(len(ordered) - 1, max(0, math.ceil(ratio * len(ordered)) - 1))
+    return round(float(ordered[index]), 1)
+
+
 @app.get("/api/stats")
-async def stats(user: dict = Depends(require_roles("admin", "sre"))):
+async def stats(
+    period_hours: int = Query(24, ge=1),
+    user: dict = Depends(require_roles("admin", "sre")),
+):
+    now = _utc_naive_now()
+    start = now - timedelta(hours=period_hours)
     async with SessionLocal() as db:
-        total = (await db.scalar(select(func.count()).select_from(Check))) or 0
-        by_decision = dict((await db.execute(
-            select(Check.decision, func.count()).group_by(Check.decision)
-        )).all())
-        by_risk = dict((await db.execute(
-            select(Check.risk_level, func.count()).group_by(Check.risk_level)
-        )).all())
+        rows = (
+            await db.execute(
+                select(
+                    Check.decision,
+                    Check.risk_level,
+                    Check.risk_category,
+                    Check.latency_ms,
+                    Check.pipeline_layer,
+                ).where(Check.created_at >= start)
+            )
+        ).all()
+
+    by_decision = {key: 0 for key in _STAT_DECISIONS}
+    by_risk = {key: 0 for key in _STAT_RISK_LEVELS}
+    by_layer = {key: 0 for key in _STAT_LAYERS}
+    categories: dict[str, int] = {}
+    latencies: list[float] = []
+
+    for decision, risk_level, risk_category, latency_ms, pipeline_layer in rows:
+        if decision in by_decision:
+            by_decision[decision] += 1
+        if risk_level in by_risk:
+            by_risk[risk_level] += 1
+        layer = (pipeline_layer or "").strip()
+        if layer:
+            by_layer[layer] = by_layer.get(layer, 0) + 1
+        category = (risk_category or "").strip()
+        if category:
+            categories[category] = categories.get(category, 0) + 1
+        if latency_ms is not None:
+            latencies.append(float(latency_ms))
+
+    top_categories = [
+        {"category": category, "count": count}
+        for category, count in sorted(categories.items(), key=lambda item: (-item[1], item[0]))
+    ][:10]
 
     return {
-        "total_checks": int(total),
+        "total_checks": len(rows),
+        "period_hours": period_hours,
         "by_decision": by_decision,
         "by_risk_level": by_risk,
+        "by_pipeline_layer": by_layer,
+        "top_categories": top_categories,
+        "latency_p50_ms": _percentile(latencies, 0.50),
+        "latency_p95_ms": _percentile(latencies, 0.95),
+        "latency_p99_ms": _percentile(latencies, 0.99),
     }
+
+
+@app.get("/api/stats/timeline")
+async def stats_timeline(
+    hours: int = Query(24, ge=1, le=168),
+    user: dict = Depends(require_roles("admin", "sre")),
+):
+    current_hour = _hour_floor(_utc_naive_now())
+    bucket_starts = [
+        current_hour - timedelta(hours=hours - 1 - offset) for offset in range(hours)
+    ]
+    buckets = {
+        start: {"allow": 0, "confirm": 0, "block": 0, "total": 0, "latency_sum": 0.0}
+        for start in bucket_starts
+    }
+    async with SessionLocal() as db:
+        rows = (
+            await db.execute(
+                select(Check.created_at, Check.decision, Check.latency_ms).where(
+                    Check.created_at >= bucket_starts[0]
+                )
+            )
+        ).all()
+
+    for created_at, decision, latency_ms in rows:
+        if created_at is None:
+            continue
+        bucket = buckets.get(_hour_floor(created_at))
+        if bucket is None:
+            continue
+        bucket["total"] += 1
+        if decision in ("allow", "confirm", "block"):
+            bucket[decision] += 1
+        if latency_ms is not None:
+            bucket["latency_sum"] += float(latency_ms)
+
+    items = []
+    for start in bucket_starts:
+        bucket = buckets[start]
+        total = bucket["total"]
+        items.append({
+            "hour": _hour_iso(start),
+            "allow": bucket["allow"],
+            "confirm": bucket["confirm"],
+            "block": bucket["block"],
+            "total": total,
+            "avg_latency_ms": round(bucket["latency_sum"] / total, 1) if total else 0,
+        })
+    return {"items": items}
 
 
 # ---------------------- Exception handler ----------------------
