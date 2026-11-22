@@ -70,15 +70,15 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }
   const isBlock = result.decision === 'block';
 
   const borderColor = isBlock
-    ? 'border-red-200 bg-red-50'
+    ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
     : isConfirm
-      ? 'border-yellow-200 bg-yellow-50'
-      : 'border-green-200 bg-green-50';
+      ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20'
+      : 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20';
 
   return (
     <div className={`rounded-xl border-2 p-5 space-y-4 ${borderColor}`}>
       {/* Header */}
-      <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-sm uppercase tracking-wide">
+      <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm uppercase tracking-wide">
         Результат проверки
       </h3>
 
@@ -89,7 +89,7 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }
       </div>
 
       {result.is_multi_step_attack && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded flex items-center gap-2 text-sm font-medium">
+        <div className="bg-red-100 dark:bg-red-900/40 border-l-4 border-red-500 text-red-700 dark:text-red-200 p-4 rounded flex items-center gap-2 text-sm font-medium">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           Многошаговая атака обнаружена
         </div>
@@ -97,48 +97,48 @@ function ResultCard({ result, onConfirm, onReject, confirmLoading, showActions }
 
       {/* Category */}
       <div>
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
           Категория
         </span>
-        <p className="mt-0.5 text-sm font-mono text-gray-800 dark:text-gray-100">
+        <p className="mt-0.5 text-sm font-mono text-gray-900 dark:text-gray-100">
           {result.risk_category}
         </p>
       </div>
 
       {/* Explanation */}
       <div>
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide">
           Объяснение
         </span>
-        <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200 italic leading-relaxed">
+        <p className="mt-0.5 text-sm text-gray-900 dark:text-gray-100 italic leading-relaxed">
           {result.explanation}
         </p>
       </div>
 
       {/* Meta row */}
-      <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex flex-wrap gap-4 text-xs text-gray-700 dark:text-gray-300">
         <span>
           ⏱ Задержка:{' '}
-          <span className="font-medium text-gray-700 dark:text-gray-200">
+          <span className="font-medium text-gray-900 dark:text-gray-100">
             {result.latency_ms} мс
           </span>
         </span>
         <span>
           🔁 Слой:{' '}
-          <span className="font-medium text-gray-700 dark:text-gray-200">
+          <span className="font-medium text-gray-900 dark:text-gray-100">
             {result.pipeline_layer}
           </span>
         </span>
       </div>
 
       {/* Check ID */}
-      <p className="text-xs text-gray-400 dark:text-gray-500 font-mono break-all">
+      <p className="text-xs text-gray-700 dark:text-gray-300 font-mono break-all">
         ID: {result.check_id}
       </p>
 
       {/* Confirm/Reject buttons — only when decision === "confirm" */}
       {isConfirm && showActions && (
-        <div className="flex gap-3 pt-1 border-t border-yellow-200">
+        <div className="flex gap-3 pt-1 border-t border-yellow-200 dark:border-yellow-800">
           <button
             onClick={onConfirm}
             disabled={confirmLoading}

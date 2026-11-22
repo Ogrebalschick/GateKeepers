@@ -207,13 +207,20 @@ export async function getSessionById(id: string): Promise<SessionDetail> {
 
 // ─── GET /api/stats ───────────────────────────────────────────────────────────
 
-export async function getStats(): Promise<StatsResponse> {
-  return apiClient.get<StatsResponse>('/api/stats').then((r) => r.data);
+export async function getStats(
+  periodHours?: number | { readonly queryKey: readonly unknown[] },
+): Promise<StatsResponse> {
+  const hours = typeof periodHours === 'number' ? periodHours : undefined;
+  return apiClient
+    .get<StatsResponse>('/api/stats', {
+      params: hours ? { period_hours: hours } : undefined,
+    })
+    .then((r) => r.data);
 }
 
 // ─── GET /api/stats/timeline ──────────────────────────────────────────────────
 
-export async function getTimeline(hours = 24): Promise<TimelineResponse> {
+export async function getTimeline(hours: number): Promise<TimelineResponse> {
   return apiClient
     .get<TimelineResponse>('/api/stats/timeline', { params: { hours } })
     .then((r) => r.data);
