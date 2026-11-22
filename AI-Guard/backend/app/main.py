@@ -41,6 +41,7 @@ from .schemas import (
     LoginRequest,
     LoginResponse,
     PolicyUpdateRequest,
+    SessionCreateRequest,
 )
 
 settings = get_settings()
@@ -790,6 +791,144 @@ async def policy_history(user: dict = Depends(require_roles("admin", "sre"))):
             for r in rows
         ]
     }
+
+
+# ---------------------- Sessions ----------------------
+def _iso(value: datetime | None) -> str | None:
+    return value.isoformat() if value is not None else None
+
+
+def _threat_flags(raw: str | None) -> list[str]:
+    try:
+        flags = json.loads(raw or "[]")
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if not isinstance(flags, list):
+        return []
+    return [item for item in flags if isinstance(item, str)]
+
+
+def _session_item(row: GuardSession) -> dict:
+    return {
+        "id": row.id,
+        "session_id": row.session_id,
+        "created_at": _iso(row.created_at),
+        "user_id": row.user_id,
+        "user_role": row.user_role,
+        "max_requests": row.max_requests,
+        "request_count": row.request_count,
+        "status": row.status,
+        "last_activity_at": _iso(row.last_activity_at),
+        "threat_flags": _threat_flags(row.threat_flags_json),
+    }
+
+
+def _session_message(link: CheckSession, check: Check) -> dict:
+    prompt = check.user_prompt or ""
+    return {
+        "id": link.id,
+        "message_index": link.message_index,
+        "check_id": check.check_id,
+        "created_at": _iso(check.created_at),
+        "user_prompt": prompt[:300],
+        "decision": check.decision,
+        "risk_level": check.risk_level,
+        "risk_category": check.risk_category,
+        "explanation": check.explanation,
+        "latency_ms": check.latency_ms,
+        "pipeline_layer": check.pipeline_layer,
+        "is_multi_step_attack": bool(link.is_multi_step_attack),
+    }
+
+
+@app.get("/api/sessions")
+async def list_sessions(
+    status: str = "",
+    user_id: str = "",
+    page: int = 1,
+    per_page: int = 20,
+    user: dict = Depends(require_roles("admin", "sre", "developer")),
+):
+    page = page if page >= 1 else 1
+    per_page = per_page if per_page >= 1 else 20
+    stmt = select(GuardSession)
+    if user["role"] == "developer":
+        stmt = stmt.where(GuardSession.user_id == user["user_id"])
+    elif user_id:
+        stmt = stmt.where(GuardSession.user_id == user_id)
+    if status:
+        stmt = stmt.where(GuardSession.status == status)
+    async with SessionLocal() as db:
+        total = int(await db.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
+        rows = (
+            await db.execute(
+                stmt.order_by(GuardSession.created_at.desc(), GuardSession.id.desc())
+                .offset((page - 1) * per_page)
+                .limit(per_page)
+            )
+        ).scalars().all()
+    pages = (total + per_page - 1) // per_page if total else 0
+    return {
+        "items": [_session_item(row) for row in rows],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": pages,
+    }
+
+
+@app.post("/api/sessions", status_code=201)
+async def create_session(
+    body: SessionCreateRequest,
+    user: dict = Depends(require_roles("admin", "sre", "developer")),
+):
+    if user["role"] == "developer":
+        owner = user["user_id"]
+    else:
+        owner = (body.user_id or "").strip() or user["user_id"]
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    row = GuardSession(
+        session_id=str(uuid.uuid4()),
+        user_id=owner,
+        user_role=user["role"],
+        status="active",
+        request_count=0,
+        max_requests=body.max_requests if body.max_requests is not None else 100,
+        created_at=now,
+        last_activity_at=now,
+        threat_flags_json="[]",
+    )
+    async with SessionLocal() as db:
+        db.add(row)
+        await db.commit()
+        await db.refresh(row)
+        return _session_item(row)
+
+
+@app.get("/api/sessions/{session_id}")
+async def get_session(
+    session_id: str,
+    user: dict = Depends(require_roles("admin", "sre", "developer")),
+):
+    async with SessionLocal() as db:
+        row = await db.scalar(
+            select(GuardSession).where(GuardSession.session_id == session_id)
+        )
+        if row is None:
+            raise HTTPException(404, {"error": "session_not_found"})
+        if user["role"] == "developer" and row.user_id != user["user_id"]:
+            raise HTTPException(403, {"error": "forbidden"})
+        pairs = (
+            await db.execute(
+                select(CheckSession, Check)
+                .join(Check, Check.check_id == CheckSession.check_id)
+                .where(CheckSession.session_id == session_id)
+                .order_by(CheckSession.message_index.asc())
+            )
+        ).all()
+    item = _session_item(row)
+    item["messages"] = [_session_message(link, check) for link, check in pairs]
+    return item
 
 
 # ---------------------- Stats ----------------------

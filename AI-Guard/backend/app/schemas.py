@@ -103,6 +103,13 @@ class PolicyUpdateRequest(BaseModel):
     comment: Optional[str] = None
 
 
+class SessionCreateRequest(BaseModel):
+    user_id: Optional[str] = None
+    user_role: Optional[str] = None
+    max_requests: Optional[int] = None
+    metadata: Optional[dict] = None
+
+
 DECISIONS = frozenset(Decision)
 POLICY_DECISIONS = frozenset(PolicyDecision)
 RISK_LEVELS = frozenset(RiskLevel)
