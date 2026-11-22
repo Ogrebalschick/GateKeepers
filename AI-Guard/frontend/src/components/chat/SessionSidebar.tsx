@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { getSessions } from '../../services/api';
 import SessionItem from './SessionItem';
@@ -15,7 +15,6 @@ export default function SessionSidebar({
   onSelect,
   onCreateClick,
 }: SessionSidebarProps) {
-  const navigate = useNavigate();
   const { isAuthenticated } = useCurrentUser();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['sessions', 'chat'],
@@ -32,13 +31,7 @@ export default function SessionSidebar({
       <div className="border-b border-gray-200 px-4 py-4 dark:border-slate-700">
         <button
           type="button"
-          onClick={() => {
-            if (!isAuthenticated) {
-              navigate('/login?redirect=%2Fchat');
-              return;
-            }
-            onCreateClick();
-          }}
+          onClick={onCreateClick}
           className="flex w-full cursor-pointer items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
         >
           Новый чат

@@ -1,16 +1,18 @@
 import { MessageSquare, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ChatInput from '../components/chat/ChatInput';
 import ChatLayout from '../components/chat/ChatLayout';
+import NewChatModal from '../components/chat/NewChatModal';
 import SessionSidebar from '../components/chat/SessionSidebar';
 import { RoleBadge } from '../components/RoleBadge';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { logout } from '../services/api';
 
 export default function ChatPage() {
+  const navigate = useNavigate();
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { username, role, isAuthenticated } = useCurrentUser();
@@ -96,7 +98,13 @@ export default function ChatPage() {
           <SessionSidebar
             selectedId={selectedSessionId}
             onSelect={setSelectedSessionId}
-            onCreateClick={() => toast('Дальше в CHAT-003')}
+            onCreateClick={() => {
+              if (!isAuthenticated) {
+                navigate('/login?redirect=%2Fchat');
+                return;
+              }
+              setIsCreateModalOpen(true);
+            }}
           />
         }
       >
@@ -110,6 +118,14 @@ export default function ChatPage() {
           <ChatInput />
         </div>
       </ChatLayout>
+      <NewChatModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={(sessionId) => {
+          setSelectedSessionId(sessionId);
+          setIsCreateModalOpen(false);
+        }}
+      />
     </div>
   );
 }
