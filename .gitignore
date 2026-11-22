@@ -1,4 +1,24 @@
 .env
+!.env.example
 
 # Local LLM weights are not stored in Git
 AI-Guard/models/*.gguf
+
+# Local Docker data created by compose. Images and compose files stay tracked.
+volumes/
+data/
+mariadb_data/
+logs/
+*.log
+docker-compose.override.yml
+
+# Local temp files, caches, and editor state
+tmp/
+.tmp/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.vscode/
+.idea/
+*.swp
