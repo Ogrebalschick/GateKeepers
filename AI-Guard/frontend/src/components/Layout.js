@@ -8,7 +8,7 @@ import { RoleBadge } from './RoleBadge';
 import { ThemeToggle } from './ThemeToggle';
 import { useTour } from './Tour';
 const NAV_ITEMS = [
-    { to: '/', Icon: Search, label: 'Проверить', roles: ['admin', 'sre', 'developer'] },
+    { to: '/', Icon: Search, label: '💬 Чат', roles: ['admin', 'sre', 'developer'] },
     {
         to: '/dashboard',
         Icon: BarChart3,

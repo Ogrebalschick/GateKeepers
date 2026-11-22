@@ -29,7 +29,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', Icon: Search, label: 'Проверить', roles: ['admin', 'sre', 'developer'] },
+  { to: '/', Icon: Search, label: '💬 Чат', roles: ['admin', 'sre', 'developer'] },
   {
     to: '/dashboard',
     Icon: BarChart3,

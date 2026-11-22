@@ -5,7 +5,7 @@ import { Layout } from './components';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { TourProvider } from './components/Tour';
-import CheckPage from './pages/CheckPage';
+import ChatPage from './pages/ChatPage';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import LogsPage from './pages/LogsPage';
@@ -35,7 +35,7 @@ export default function App() {
 
               {/* Все страницы — внутри Layout */}
               <Route element={<Layout />}>
-                <Route path="/" element={<CheckPage />} />
+                <Route path="/" element={<ChatPage />} />
                 <Route
                   path="/dashboard"
                   element={
