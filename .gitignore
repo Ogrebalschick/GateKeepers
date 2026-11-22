@@ -5,8 +5,11 @@
 AI-Guard/models/*.gguf
 
 # Local Docker data created by compose. Images and compose files stay tracked.
+# `data/` matches every directory of that name. Frontend seed is source, not a volume.
 volumes/
 data/
+!AI-Guard/frontend/src/data/
+!AI-Guard/frontend/src/data/**
 mariadb_data/
 logs/
 *.log
